@@ -1,0 +1,37 @@
+awe awaeea aowij iajwoeaea aw efasr nsrt n es
+owaiejio joiajeoi aoejaw www aw ea g bs enest
+oaiwejoi jaweoij oiawejawe awe aw eaw
+aoiwejoij oajwe oiaoawe awe mmm a efawe fagw a
+
+
+
+
+
+
+
+
+
+# def check_full_screen(reference_image):
+#     screen_width, screen_height = pyautogui.size()
+#     right_bound = screen_width - reference_image.size[0]
+#     bottom_bound = screen_height - reference_image.size[1]
+#     for y in range(0, bottom_bound, reference_image.size[0]//2):
+#         for x in range(0, right_bound, reference_image.size[1]//2):
+#             compare_images(reference_image, get_image([x, y]))
+#         print(y)
+
+
+# reference_image_path = name_SS('d5')
+# reference_image = load_the_image(reference_image_path)
+
+# acceptable_threshold = threshold_calculation(reference_image_path)
+# print("Threshold: " + str(acceptable_threshold))
+
+# cont = True
+# while True:
+#     time.sleep(0.1)
+#     compare_images(get_image(), reference_image)
+#     compare_images(reference_image, get_image(top_left))
+#
+#
+# check_full_screen(reference_image)

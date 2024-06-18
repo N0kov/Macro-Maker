@@ -128,7 +128,10 @@ class MainClass:
                     image.run() for image in self.absent_images)):
                 continue
             break
+                Listener.start_listener()
         for action in self.actions:
+            if not Listener.continue_script():
+                break
             action.run()
 
     def import_commands(self, actions, present_images, absent_images):

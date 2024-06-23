@@ -5,8 +5,9 @@ keyboard = Controller()
 
 
 class TypeText(Action):
-    def __init__(self):
-        phrase = input("Enter the phrase you would like to type. Add \'+\' between keys for a function ")
+    def __init__(self, phrase=None):
+        if phrase == None:
+            phrase = input("Enter the phrase you would like to type. Add \'+\' between keys for a function ")
         self.series = []
         if '+' not in phrase:
             self.series = list(phrase)

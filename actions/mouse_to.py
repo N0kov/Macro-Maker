@@ -4,12 +4,15 @@ from Listener import start_listener, continue_script
 
 
 class MouseTo(Action):
-    def __init__(self):
-        print("Move your mouse to the desired position. Press shift when ready. ", end="")
-        start_listener()
-        while continue_script():
-            pass
-        self.coordinates = (get_mouse_position()[0], get_mouse_position()[1])
+    def __init__(self, coordinates=None):
+        if coordinates == None:
+            print("Move your mouse to the desired position. Press shift when ready. ", end="")
+            start_listener()
+            while continue_script():
+                pass
+            self.coordinates = (get_mouse_position()[0], get_mouse_position()[1])
+        else:
+            self.coordinates = coordinates
 
     def run(self):
         mouse_to(self.coordinates)

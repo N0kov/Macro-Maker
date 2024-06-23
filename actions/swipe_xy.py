@@ -4,18 +4,22 @@ from Listener import start_listener, continue_script
 
 
 class SwipeXY(Action):
-    def __init__(self):
-        print("Move your mouse to the desired start position. Press shift when ready.", end="")
-        start_listener()
-        while continue_script():
-            pass
-        self.start = (get_mouse_position()[0], get_mouse_position()[1])
-        print("\nMove your mouse to the desired end position. Press shift when ready.", end="")
-        start_listener()
-        while continue_script():
-            pass
-        self.end = (get_mouse_position()[0], get_mouse_position()[1])
-        print()  # Clearing the end="" from above
+    def __init__(self, start=None, end=None):
+        if start == None or end == None:
+            print("Move your mouse to the desired start position. Press shift when ready.", end="")
+            start_listener()
+            while continue_script():
+                pass
+            self.start = (get_mouse_position()[0], get_mouse_position()[1])
+            print("\nMove your mouse to the desired end position. Press shift when ready.", end="")
+            start_listener()
+            while continue_script():
+                pass
+            self.end = (get_mouse_position()[0], get_mouse_position()[1])
+            print()  # Clearing the end="" from above
+        else:
+            self.start = start
+            self.end = end
 
     def run(self):
         move_between(self.start, self.end)

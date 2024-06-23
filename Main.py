@@ -104,6 +104,7 @@ def delete_action():
 
 def insert_at_index():
     new_object = actions.pop()
+    print("Current commands\n: " + get_actions() + " ")
     index = input("Please pick an index ")
     try:
         if -1 < int(index) - 1 < len(actions):

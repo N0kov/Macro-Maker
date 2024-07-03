@@ -1,36 +1,84 @@
-from actions.action import Action
-from MouseShortcuts import click_pos, get_mouse_position
-from pynput.mouse import Button
-from Listener import start_listener, continue_script
+# actions/click_x.py
 
+from PyQt5 import QtWidgets, QtCore
+from PyQt5.QtWidgets import QVBoxLayout, QLabel, QComboBox, QPushButton
+from pynput.mouse import Button, Controller
+from .action import Action
+from MouseShortcuts import click_pos
 
 class ClickX(Action):
     def __init__(self, coordinates=None, click_type=None):
-        if coordinates == None:
-            print("Move your mouse to the desired position. Press shift when ready. ", end="")
-            start_listener()
-            while continue_script():
-                pass
-            self.coordinates = (get_mouse_position()[0], get_mouse_position()[1])
-            print()
+        if coordinates is None:
+            self.coordinates = (0, 0)
         else:
             self.coordinates = coordinates
-        if click_type == None:
-            click_type = ""
-            while click_type != "l" and click_type != "r" and click_type != "m":
-                click_type = input("(L)eft, (R)ight or (M)iddle click? ").lower()
 
         self.click = "Left"
-        self.click_type = getattr(Button, "left")
-        if click_type == "r":
-            self.click_type = getattr(Button, "right")
+        self.click_type = Button.left
+        if click_type in ("r", "right"):
+            self.click_type = Button.right
             self.click = "Right"
-        elif click_type == "m":
-            self.click_type = getattr(Button, "middle")
+        elif click_type in ("m", "middle"):
+            self.click_type = Button.middle
             self.click = "Middle"
 
     def run(self):
         click_pos(self.coordinates, self.click_type)
 
     def __str__(self):
-        return self.click + " click at (" + str(self.coordinates[0]) + ", " + str(self.coordinates[1]) + ")"
+        return self.click + " click at " + str(self.coordinates)
+
+
+class click_x_ui(QtWidgets.QWidget):
+    def __init__(self, main_app, parent=None):
+        super(click_x_ui, self).__init__(parent)
+        self.main_app = main_app
+        self.init_ui()
+
+    def init_ui(self):
+        self.layout = QVBoxLayout(self)
+        self.label = QLabel("Make a new click action")
+        self.layout.addWidget(self.label)
+
+        self.click_type_label = QLabel("Select Click Type:")
+        self.layout.addWidget(self.click_type_label)
+        self.click_type_combo = QComboBox()
+        self.click_type_combo.addItems(["Left", "Right", "Middle"])
+        self.layout.addWidget(self.click_type_combo)
+
+        self.coordinates_label = QLabel("Press shift to set coordinates to where your mouse is.")
+        self.layout.addWidget(self.coordinates_label)
+
+        self.coordinates_display = QLabel("Coordinates: Not set")
+        self.layout.addWidget(self.coordinates_display)
+
+        self.save_button = QPushButton("Save")
+        self.save_button.clicked.connect(self.save_action)
+        self.layout.addWidget(self.save_button)
+
+        self.back_button = QPushButton("Back")
+        self.back_button.clicked.connect(self.main_app.switch_to_main_view)
+        self.layout.addWidget(self.back_button)
+
+        self.coordinates = None
+        self.installEventFilter(self)
+
+    def eventFilter(self, obj, event):
+        if event.type() == QtCore.QEvent.KeyPress and event.key() == QtCore.Qt.Key_Shift:
+            self.set_coordinates()
+            return True
+        return super(click_x_ui, self).eventFilter(obj, event)
+
+    def set_coordinates(self):
+        # Record current mouse position
+        self.coordinates = Controller().position
+        self.coordinates_display.setText("Coordinates: " + str(self.coordinates))
+
+    def save_action(self):
+        # Save the action
+        click_type = self.click_type_combo.currentText().lower()[0]
+        coordinates = self.coordinates
+        if coordinates:
+            action = ClickX(coordinates, click_type)
+            self.main_app.add_action(action)
+        self.main_app.switch_to_main_view()

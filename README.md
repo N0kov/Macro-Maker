@@ -1,3 +1,5 @@
-A program to quickly make macros which can be image detection based. Macros currently constructed via an IDE. A GUI will come later
+A program to quickly make macros which can be image detection based.
 
-Run Main to use. Label files as instructed in the load_script_example.py file, and run that to quickly run completed macros
+Run UI3 to use
+
+Most likley will not run on MacOS due to it not allowing use of the mouse. Tested on Manjaro

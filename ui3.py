@@ -97,15 +97,18 @@ class MacroManagerApp(QMainWindow):
         self.central_widget.setCurrentWidget(self.main_view)
 
     def run_actions(self):
-        start_listener()
-        while continue_script():
-            if not any(not image.run() for image in self.present_images) or any(
-                    image.run() for image in self.absent_images):
-                break
-        for action in self.actions:
+        while True:
+            start_listener()
+            while continue_script():
+                if not any(not image.run() for image in self.present_images) or any(
+                        image.run() for image in self.absent_images):
+                    break
+            for action in self.actions:
+                if not continue_script():
+                    break
+                action.run()
             if not continue_script():
                 break
-            action.run()
 
     def save_actions(self):
         options = QFileDialog.Options()

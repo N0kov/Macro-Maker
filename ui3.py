@@ -6,10 +6,10 @@ from actions import Wait
 import Listener
 from Listener import start_listener, continue_script
 from ImageConditions import ImageConfigView
-from actions import click_x_ui, wait_ui, mouse_to_ui, type_text_ui, swipe_xy_ui
+from actions import ClickXUI, WaitUI, MouseToUI, TypeTextUI, SwipeXyUi
 from PyQt5.QtCore import Qt, QPoint
 
-class MacroManagerApp(QMainWindow):
+class MacroManagerMain(QMainWindow):
     def __init__(self):
         super().__init__()
 
@@ -112,7 +112,7 @@ class MacroManagerApp(QMainWindow):
         if self.run_combo.currentText() == "Run infinitely":
             run_infinite = True
 
-        Listener.start_listener()
+        start_listener()
         print(run_infinite)
 
         while True:
@@ -181,15 +181,15 @@ class MacroManagerApp(QMainWindow):
 
     def show_action_config_view(self, action_type):
         if action_type == "click":
-            self.action_config_view = click_x_ui(self)
+            self.action_config_view = ClickXUI(self)
         elif action_type == "wait":
-            self.action_config_view = wait_ui(self)
+            self.action_config_view = WaitUI(self)
         elif action_type == "move":
-            self.action_config_view = mouse_to_ui(self)
+            self.action_config_view = MouseToUI(self)
         elif action_type == "type":
-            self.action_config_view = type_text_ui(self)
+            self.action_config_view = TypeTextUI(self)
         elif action_type == "swipe":
-            self.action_config_view = swipe_xy_ui(self)
+            self.action_config_view = SwipeXyUi(self)
         else:     # In case something weird gets called that isn't one of the above
             return
 
@@ -278,7 +278,7 @@ class MacroManagerApp(QMainWindow):
 
 def main():
     app = QApplication(sys.argv)
-    main_window = MacroManagerApp()
+    main_window = MacroManagerMain()
     main_window.show()
     sys.exit(app.exec_())
 

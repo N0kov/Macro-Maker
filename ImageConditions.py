@@ -46,12 +46,14 @@ class Image:
     def get_image(self):
         return self.pixmap
 
+
 def check_sizes(top_left, bottom_right):
     for index in range(len(top_left)):
         if top_left[index] > bottom_right[index]:
             temp = top_left[index]
             top_left[index] = bottom_right[index]
             bottom_right[index] = temp
+
 
 class ImageConfigView(QtWidgets.QWidget):
     def __init__(self, main_app, parent=None):
@@ -116,7 +118,8 @@ class ImageConfigView(QtWidgets.QWidget):
             if event.type() == QtCore.QEvent.KeyPress and event.key() == QtCore.Qt.Key_Alt:
                 check_sizes(self.top_left, self.bottom_right)
 
-                self.image = get_image_not_np([[self.top_left[0], self.top_left[1]], [self.bottom_right[0], self.bottom_right[1]]])
+                self.image = get_image_not_np([[self.top_left[0], self.top_left[1]],
+                                               [self.bottom_right[0], self.bottom_right[1]]])
 
                 # To QPixmap
                 image_qt = QtGui.QImage(self.image.tobytes(), self.image.width, self.image.height,

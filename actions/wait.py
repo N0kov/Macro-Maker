@@ -24,9 +24,10 @@ class Wait(Action):
     def run(self):
         sleep(self.wait_time)
 
-class wait_ui(QtWidgets.QWidget):
+
+class WaitUI(QtWidgets.QWidget):
     def __init__(self, main_app, parent=None):
-        super(wait_ui, self).__init__(parent)
+        super(WaitUI, self).__init__(parent)
         self.main_app = main_app
         self.init_ui()
 

@@ -6,6 +6,7 @@ from pynput.mouse import Button, Controller
 from .action import Action
 from MouseShortcuts import click_pos
 
+
 class ClickX(Action):
     def __init__(self, coordinates=None, click_type=None):
         if coordinates is None:
@@ -29,9 +30,9 @@ class ClickX(Action):
         return self.click + " click at " + str(self.coordinates)
 
 
-class click_x_ui(QtWidgets.QWidget):
+class ClickXUI(QtWidgets.QWidget):
     def __init__(self, main_app, parent=None):
-        super(click_x_ui, self).__init__(parent)
+        super(ClickXUI, self).__init__(parent)
         self.main_app = main_app
         self.init_ui()
 
@@ -67,7 +68,7 @@ class click_x_ui(QtWidgets.QWidget):
         if event.type() == QtCore.QEvent.KeyPress and event.key() == QtCore.Qt.Key_Shift:
             self.set_coordinates()
             return True
-        return super(click_x_ui, self).eventFilter(obj, event)
+        return super(ClickXUI, self).eventFilter(obj, event)
 
     def set_coordinates(self):
         # Record current mouse position

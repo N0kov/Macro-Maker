@@ -35,12 +35,13 @@ def get_image(coords):
         screenshot = screenshot.convert('RGB')
     return np.array(screenshot)
 
+
 def get_image_not_np(coords):           # replace at some point to be the de facto one
     bbox = (coords[0][0], coords[0][1], coords[1][0], coords[1][1])
     screenshot = ImageGrab.grab(bbox)
     if screenshot.mode == 'RGBA':
         screenshot = screenshot.convert('RGB')
-    return (screenshot)
+    return screenshot
 
 
 def threshold_calculation(image):

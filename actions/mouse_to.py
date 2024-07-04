@@ -21,9 +21,9 @@ class MouseTo(Action):
     def __str__(self):
         return "Mouse to (" + str(self.coordinates[0]) + ", " + str(self.coordinates[1]) + ")"
 
-class mouse_to_ui(QtWidgets.QWidget):
+class MouseToUI(QtWidgets.QWidget):
     def __init__(self, main_app, parent=None):
-        super(mouse_to_ui, self).__init__(parent)
+        super(MouseToUI, self).__init__(parent)
         self.main_app = main_app
         self.init_ui()
 
@@ -53,7 +53,7 @@ class mouse_to_ui(QtWidgets.QWidget):
         if event.type() == QtCore.QEvent.KeyPress and event.key() == QtCore.Qt.Key_Shift:
             self.set_coordinates()
             return True
-        return super(mouse_to_ui, self).eventFilter(obj, event)
+        return super(MouseToUI, self).eventFilter(obj, event)
 
     def set_coordinates(self):
         # Record the mouse position

@@ -22,11 +22,13 @@ def start_listener():
     listener = Listener(on_press=on_press)
     listener.start()
 
+
 def stop_listener():
     global listener
     if listener is not None:
         listener.stop()
         listener = None
+
 
 def continue_script():
     global running

@@ -28,9 +28,9 @@ class SwipeXY(Action):
                                                                 str(self.end[0]), str(self.end[1]))
 
 
-class swipe_xy_ui(QtWidgets.QWidget):
+class SwipeXyUi(QtWidgets.QWidget):  # Using Ui not UI, as XYUI is unclear
     def __init__(self, main_app, parent=None):
-        super(swipe_xy_ui, self).__init__(parent)
+        super(SwipeXyUi, self).__init__(parent)
         self.main_app = main_app
         self.init_ui()
 
@@ -72,7 +72,7 @@ class swipe_xy_ui(QtWidgets.QWidget):
             self.final_coordinates = Controller().position
             self.final_coordinates_display.setText("Coordinates: " + str(self.final_coordinates))
             return True
-        return super(swipe_xy_ui, self).eventFilter(obj, event)
+        return super(SwipeXyUi, self).eventFilter(obj, event)
 
     def save_action(self):
         # Save the action

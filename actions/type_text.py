@@ -26,7 +26,6 @@ class TypeText(Action):
         else:
             self.series = list(phrase)
 
-
     def run(self):
         self.multi_input(0)
 
@@ -67,9 +66,9 @@ class TypeText(Action):
                 self.series.append(temp_series[i])
 
 
-class type_text_ui(QtWidgets.QWidget):
+class TypeTextUI(QtWidgets.QWidget):
     def __init__(self, main_app, parent=None):
-        super(type_text_ui, self).__init__(parent)
+        super(TypeTextUI, self).__init__(parent)
         self.main_app = main_app
         self.init_ui()
 
@@ -84,9 +83,8 @@ class type_text_ui(QtWidgets.QWidget):
                                         "(e.g. ctrl+v or tab+)<br><br>"
                             "Use \\+ if you want to input +<br><br>"
                             "You can see all valid commands "
-                            "<a href='https://pynput.readthedocs.io/en/latest/_modules/pynput"
-                                        "/keyboard/_base.html#Key'>here</a>"
-                            )   # The docs are ugly but there are way too many commands to explain
+                            "<a href='https://pynput.readthedocs.io/en/latest/_modules/pynput"  # The docs are ugly but
+                                        "/keyboard/_base.html#Key'>here</a>")  # there are way many commands to explain
         self.instruction_label.setOpenExternalLinks(True)
         self.layout.addWidget(self.instruction_label)
 

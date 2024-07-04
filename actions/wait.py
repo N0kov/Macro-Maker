@@ -1,7 +1,7 @@
 from actions.action import Action
 from time import sleep
 from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QVBoxLayout, QLabel, QPushButton, QLineEdit
+from PyQt5.QtWidgets import QVBoxLayout, QLabel, QPushButton, QLineEdit, QComboBox
 
 
 class Wait(Action):
@@ -40,9 +40,15 @@ class wait_ui(QtWidgets.QWidget):
         self.label = QLabel("Input the wait time:")
         self.layout.addWidget(self.label)
 
-        # QLineEdit for text input
+        # QLineEdit for how long the wait is
         self.text_input = QLineEdit()
         self.layout.addWidget(self.text_input)
+
+        # QComboBox for where the wait should be inserted
+        self.between_all = QComboBox()
+        self.between_all.addItem("Only add a wait here")
+        self.between_all.addItem("Add a wait between all non-wait actions")
+        self.layout.addWidget(self.between_all)
 
         # Save button + logic
         self.save_button = QPushButton("Save")
@@ -62,10 +68,13 @@ class wait_ui(QtWidgets.QWidget):
         try:
             wait_time = float(wait_time_str)
             if wait_time >= 0:
-                action = Wait(wait_time)
-                self.main_app.add_action(action)
+                wait = Wait(wait_time)
+                if self.between_all.currentText() == "Only add a wait here":
+                    self.main_app.add_action(wait)
+                else:
+                    self.main_app.add_wait_between_all(wait)
                 self.main_app.switch_to_main_view()  # Switch back to the main view
             else:
                 QtWidgets.QMessageBox.warning(self, "Invalid Input", "Wait time must be a positive number.")
         except ValueError:
-            QtWidgets.QMessageBox.warning(self, "Invalid Input", "Please enter a valid number for wait time.")
+            QtWidgets.QMessageBox.warning(self, "Invalid Input", "Please enter a number as the wait time.")

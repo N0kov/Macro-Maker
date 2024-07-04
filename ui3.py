@@ -2,6 +2,8 @@ import sys
 import pickle
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtWidgets import *
+from actions import Wait
+import Listener
 from Listener import start_listener, continue_script
 from ImageConditions import ImageConfigView
 from actions import click_x_ui, wait_ui, mouse_to_ui, type_text_ui, swipe_xy_ui
@@ -30,13 +32,19 @@ class MacroManagerApp(QMainWindow):
 
         # Menu buttons at the top
         top_layout = QHBoxLayout()
-        self.run_button = QPushButton("Run (shift to cancel)")
+        self.run_button = QPushButton("Run options (press shift to kill the script)")
         self.run_button.clicked.connect(self.run_actions)
+
+        self.run_combo = QComboBox()
+        self.run_combo.addItem("Run once")
+        self.run_combo.addItem("Run infinitely")
+
         self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(self.save_actions)
         self.load_button = QPushButton("Load")
         self.load_button.clicked.connect(self.load_actions)
         top_layout.addWidget(self.run_button)
+        top_layout.addWidget(self.run_combo)
         top_layout.addWidget(self.save_button)
         top_layout.addWidget(self.load_button)
         main_layout.addLayout(top_layout)
@@ -51,7 +59,7 @@ class MacroManagerApp(QMainWindow):
         actions_label = QLabel("Actions")
         self.action_list = QListWidget()
         self.action_list.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.action_list.customContextMenuRequested.connect(self.show_context_menu)
+        self.action_list.customContextMenuRequested.connect(self.right_click_menu)
         actions_layout.addWidget(actions_label)
         actions_layout.addWidget(self.action_list)
 
@@ -74,7 +82,7 @@ class MacroManagerApp(QMainWindow):
         self.image_list = QListWidget()
         self.image_list.itemClicked.connect(self.display_selected_image)
         self.image_list.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.image_list.customContextMenuRequested.connect(self.show_context_menu)
+        self.image_list.customContextMenuRequested.connect(self.right_click_menu)
         conditions_layout.addWidget(self.image_list)
 
         self.add_condition_button = QPushButton("+")
@@ -97,18 +105,31 @@ class MacroManagerApp(QMainWindow):
         self.central_widget.setCurrentWidget(self.main_view)
 
     def run_actions(self):
+        if not self.actions:  # So processing power isn't wasted running a script that will trigger nothing
+            return
+
+        run_infinite = False
+        if self.run_combo.currentText() == "Run infinitely":
+            run_infinite = True
+
+        Listener.start_listener()
+        print(run_infinite)
+
         while True:
-            start_listener()
             while continue_script():
                 if not any(not image.run() for image in self.present_images) or any(
                         image.run() for image in self.absent_images):
                     break
             for action in self.actions:
                 if not continue_script():
-                    break
+                    return
                 action.run()
+            if not run_infinite:
+                print(run_infinite)
+                print(Listener.running)
+                return
             if not continue_script():
-                break
+                return
 
     def save_actions(self):
         options = QFileDialog.Options()
@@ -182,6 +203,15 @@ class MacroManagerApp(QMainWindow):
         self.actions.append(action)
         self.update_action_list()
 
+
+    def add_wait_between_all(self, wait):
+        if self.actions:
+            for i in range(len(self.actions) - 1, 0, -1):
+                if not isinstance(self.actions[i], Wait):
+                    if not isinstance(self.actions[i - 1], Wait):
+                        self.actions.insert(i, wait)
+            self.update_action_list()
+
     def add_condition(self, condition, present_or_not):
         if present_or_not == "p":
             self.present_images.append(condition)
@@ -195,7 +225,6 @@ class MacroManagerApp(QMainWindow):
             item = QListWidgetItem(str(action))
             item.setData(QtCore.Qt.UserRole, action)
             self.action_list.addItem(item)
-        print(self.action_list)
 
     def update_condition_list(self):
         self.image_list.clear()
@@ -207,14 +236,13 @@ class MacroManagerApp(QMainWindow):
             item = QListWidgetItem("Absent Image")
             item.setData(QtCore.Qt.UserRole, condition)
             self.image_list.addItem(item)
-        print(self.image_list)
 
     def display_selected_image(self, item):
         condition = item.data(QtCore.Qt.UserRole)
         pixmap = condition.get_image()
         self.image_label.setPixmap(pixmap.scaled(self.image_label.size(), QtCore.Qt.KeepAspectRatio))
 
-    def show_context_menu(self, position: QPoint):
+    def right_click_menu(self, position: QPoint):
         # Options
         sender = self.sender()
         menu = QMenu()
@@ -241,9 +269,7 @@ class MacroManagerApp(QMainWindow):
         sender.clearSelection()
 
     def handle_remove_action(self, item, item_list):
-        print(item_list)
         item_list.remove(item)
-        print(item_list)
         if item_list is self.actions:
             self.update_action_list()
         else:

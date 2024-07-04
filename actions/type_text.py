@@ -7,8 +7,8 @@ import re
 keyboard = Controller()
 
 
-class TypeText(Action):    # To make this and the UI work cleanly, run making a TextType in
-    def __init__(self, phrase=None):  # a try except AttributeError loop
+class TypeText(Action):
+    def __init__(self, phrase=None):
         if phrase is None:
             phrase = input("Enter the phrase you would like to type. Add \'+\' between keys for a function \n"
                            "Use '\\+' if you want to input a plus")
@@ -60,8 +60,8 @@ class TypeText(Action):    # To make this and the UI work cleanly, run making a 
         for i in range(len(temp_series)):
             if len(temp_series[i]) > 1:
                 try:  # Crashes if you try to do a getattr with something like altt so need a try except
-                    self.series.insert(0, getattr(Key, (temp_series[i])))
-                except AttributeError:
+                    self.series.insert(0, getattr(Key, (temp_series[i])))  # More efficient than checking if
+                except AttributeError:                                            # the command they input is ok
                     self.series += list(temp_series[i])
             else:
                 self.series.append(temp_series[i])

@@ -23,3 +23,11 @@ def move_between(pos1, pos2):
     sleep(.1)
     mouse_to(pos2)
     mouse.release(Button.left)
+
+def check_valid_input(input):
+    try:  # Checking that both x and y are floats
+        x = float(input[0])  # (10000. 10000) would just send to the bottom right, it wouldn't crash
+        y = float(input[1])
+        return (x, y)  # Forcing the correct format
+    except ValueError:
+        return (0, 0)  # In case bad data gets passed in

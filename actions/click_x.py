@@ -4,7 +4,7 @@ from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import QVBoxLayout, QLabel, QComboBox, QPushButton
 from pynput.mouse import Button, Controller
 from .action import Action
-from MouseShortcuts import click_pos
+from MouseShortcuts import click_pos, check_valid_input
 
 
 class ClickX(Action):
@@ -12,7 +12,7 @@ class ClickX(Action):
         if coordinates is None:
             self.coordinates = (0, 0)
         else:
-            self.coordinates = coordinates
+            self.coordinates = check_valid_input(coordinates)
 
         self.click = "Left"
         self.click_type = Button.left

@@ -10,19 +10,27 @@ class Wait(Action):
         if wait_time is None:
             while True:
                 wait_time = input("How long would you like to wait for (in seconds)? ")
-                try:
-                    wait_time = float(wait_time)
-                    if wait_time >= 0:
-                        break
-                except ValueError:
-                    pass
+                if check_number_validity(wait_time):
+                    break
+        elif not check_number_validity(wait_time):
+            wait_time = 0
         self.wait_time = wait_time
+
 
     def __str__(self):
         return "Waiting for " + str(self.wait_time) + " seconds"
 
     def run(self):
         sleep(self.wait_time)
+
+
+def check_number_validity(wait_time):
+    try:
+        wait_time = float(wait_time)
+        if wait_time >= 0:
+            return True
+    except ValueError:
+        return False
 
 
 class WaitUI(QtWidgets.QWidget):
@@ -68,7 +76,7 @@ class WaitUI(QtWidgets.QWidget):
         wait_time_str = self.text_input.text()
         try:
             wait_time = float(wait_time_str)
-            if wait_time >= 0:
+            if wait_time > 0:
                 wait = Wait(wait_time)
                 if self.between_all.currentText() == "Only add a wait here":
                     self.main_app.add_action(wait)

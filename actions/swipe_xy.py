@@ -1,5 +1,5 @@
 from actions.action import Action
-from MouseShortcuts import move_between
+from MouseShortcuts import move_between, check_valid_input
 from Listener import wait_for_shift_press
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import QVBoxLayout, QLabel, QPushButton
@@ -17,15 +17,16 @@ class SwipeXY(Action):
             self.end = (Controller().position[0], Controller().position[1])
             print()  # Clearing the end="" from above
         else:
-            self.start = start
-            self.end = end
+
+            self.start = check_valid_input(start)
+            self.end = check_valid_input(end)
 
     def run(self):
         move_between(self.start, self.end)
 
     def __str__(self):
-        return "Swipe between ({0}, {1}) and ({2}, {3})".format(str(self.start[0]), str(self.start[1]),
-                                                                str(self.end[0]), str(self.end[1]))
+        return ("Swipe between (" + str(self.start[0]) + ", " + str(self.start[1]) + ") and (" + str(self.end[0]) +
+            ", " + str(self.end[1]) + ")")
 
 
 class SwipeXyUi(QtWidgets.QWidget):  # Using Ui not UI, as XYUI is unclear

@@ -15,22 +15,22 @@ class TestClickX(TestCase):
 
     def test_coordinate_passing_invalid_data(self):
         top_left = (0, 0)
-        assert top_left, click_x.ClickX(50).coordinates
+        self.assertEqual(top_left, click_x.ClickX(50).coordinates)
 
-        assert top_left, click_x.ClickX(("300", "8000")).coordinates
+        self.assertEqual(top_left, click_x.ClickX(("300", "8000")).coordinates)
 
     def test_click_type_valid(self):
         default_click = click_x.ClickX((50, 30))
         assert Button.left, default_click.click_type
 
         left_test_l = click_x.ClickX((51, 31), "l")
-        assert Button.left, left_test_l
+        self.assertEqual(Button.left, left_test_l)
 
         left_test_left = click_x.ClickX((54, 14), "left")
-        assert Button.left, left_test_left
+        self.assertEqual(Button.left, left_test_left)
 
         right_test_r = click_x.ClickX((146, 642), "r")
-        assert Button.left, right_test_r
+        self.assertEqual(Button.left, right_test_r)
 
         right_test_right = click_x.ClickX((752, 457), "right")
         assert Button.left, right_test_right

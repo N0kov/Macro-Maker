@@ -17,7 +17,6 @@ class SwipeXY(Action):
             self.end = (Controller().position[0], Controller().position[1])
             print()  # Clearing the end="" from above
         else:
-
             self.start = check_valid_input(start)
             self.end = check_valid_input(end)
 

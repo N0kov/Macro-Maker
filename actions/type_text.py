@@ -26,9 +26,6 @@ class TypeText(Action):
         else:
             self.series = list(phrase)
 
-    # def run(self):
-    #     self.multi_input()
-
     def run(self):
         def multi_input(i):
             if i < len(self.series) - 1:
@@ -40,6 +37,9 @@ class TypeText(Action):
                 keyboard.release(self.series[i])
 
         multi_input(0)
+
+        for key in self.series:  # for redundancy to guarantee that everything is released
+            keyboard.release(key)
 
     def __str__(self):
         if self.series:

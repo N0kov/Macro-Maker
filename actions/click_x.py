@@ -71,12 +71,10 @@ class ClickXUI(QtWidgets.QWidget):
         return super(ClickXUI, self).eventFilter(obj, event)
 
     def set_coordinates(self):
-        # Record current mouse position
         self.coordinates = Controller().position
         self.coordinates_display.setText("Coordinates: " + str(self.coordinates))
 
     def save_action(self):
-        # Save the action
         click_type = self.click_type_combo.currentText().lower()[0]
         coordinates = self.coordinates
         if coordinates:

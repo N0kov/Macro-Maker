@@ -75,7 +75,6 @@ class SwipeXyUi(QtWidgets.QWidget):  # Using Ui not UI, as XYUI is unclear
         return super(SwipeXyUi, self).eventFilter(obj, event)
 
     def save_action(self):
-        # Save the action
         initial_coordinates = self.initial_coordinates
         final_coordinates = self.final_coordinates
         if initial_coordinates and final_coordinates:

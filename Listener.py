@@ -4,7 +4,7 @@ running = True
 listener = None
 
 
-def on_press(key):
+def on_press(key):  # Update this to allow picking the key to listen for. Should just require a getattr
     global running, listener
     try:
         if key == Key.shift:
@@ -40,6 +40,5 @@ def wait_for_shift_press():
     while continue_script():
         pass
     stop_listener()
-
 
 start_listener()

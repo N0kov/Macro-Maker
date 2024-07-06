@@ -57,12 +57,10 @@ class MouseToUI(QtWidgets.QWidget):
         return super(MouseToUI, self).eventFilter(obj, event)
 
     def set_coordinates(self):
-        # Record the mouse position
         self.coordinates = Controller().position
         self.coordinates_display.setText("Coordinates: " + str(self.coordinates))
 
     def save_action(self):
-        # Save the action
         coordinates = self.coordinates
         if coordinates:
             action = MouseTo(coordinates)

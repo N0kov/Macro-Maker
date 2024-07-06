@@ -86,7 +86,6 @@ class TypeTextUI(QtWidgets.QWidget):
         self.label = QLabel("Create a phrase to type")
         self.layout.addWidget(self.label)
 
-        # Instructions label
         self.instruction_label = QLabel("Input the phrase below. Use + to indicate a command "
                                         "(e.g. ctrl+v or tab+)<br><br>"
                             "Use \\+ if you want to input +<br><br>"
@@ -98,16 +97,13 @@ class TypeTextUI(QtWidgets.QWidget):
 
         self.layout.addWidget(self.instruction_label)
 
-        # QLineEdit for text input
         self.text_input = QLineEdit()
         self.layout.addWidget(self.text_input)
 
-        # Save button + logic
         self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(lambda: self.save_action())
         self.layout.addWidget(self.save_button)
 
-        # Back button + logic
         self.back_button = QPushButton("Back")
         self.back_button.clicked.connect(lambda: self.main_app.switch_to_main_view())
         self.layout.addWidget(self.back_button)
@@ -115,7 +111,6 @@ class TypeTextUI(QtWidgets.QWidget):
         self.wait_time = None
 
     def save_action(self):
-        # Capture the text from the QLineEdit
         phrase = self.text_input.text()
         action = TypeText(phrase)
         self.main_app.add_action(action)

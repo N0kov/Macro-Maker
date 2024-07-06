@@ -30,7 +30,7 @@ class MacroManagerMain(QMainWindow):
         self.main_view = QWidget()
         main_layout = QVBoxLayout(self.main_view)
 
-        # Menu buttons at the top
+        # Top buttons
         top_layout = QHBoxLayout()
         self.run_button = QPushButton("Run options (press shift to kill the script)")
         self.run_button.clicked.connect(self.run_actions)
@@ -49,11 +49,10 @@ class MacroManagerMain(QMainWindow):
         top_layout.addWidget(self.load_button)
         main_layout.addLayout(top_layout)
 
-        # Actions and conditions
+        # Middle buttons
         middle_layout = QHBoxLayout()
 
-        # Actions
-        actions_frame = QFrame()
+        actions_frame = QFrame()  # Actions start here
         actions_frame.setFrameShape(QFrame.StyledPanel)
         actions_layout = QVBoxLayout(actions_frame)
         actions_label = QLabel("Actions")
@@ -72,8 +71,7 @@ class MacroManagerMain(QMainWindow):
 
         middle_layout.addWidget(actions_frame)
 
-        # Conditions Section
-        conditions_frame = QFrame()
+        conditions_frame = QFrame()  # Conditions start here
         conditions_frame.setFrameShape(QFrame.StyledPanel)
         conditions_layout = QVBoxLayout(conditions_frame)
         conditions_label = QLabel("Conditions")

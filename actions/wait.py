@@ -45,26 +45,21 @@ class WaitUI(QtWidgets.QWidget):
         self.label = QLabel("Create a new wait action")
         self.layout.addWidget(self.label)
 
-        # Instructions label
         self.label = QLabel("Input the wait time:")
         self.layout.addWidget(self.label)
 
-        # QLineEdit for how long the wait is
         self.text_input = QLineEdit()
         self.layout.addWidget(self.text_input)
 
-        # QComboBox for where the wait should be inserted
         self.between_all = QComboBox()
         self.between_all.addItem("Only add a wait here")
         self.between_all.addItem("Add a wait between all non-wait actions")
         self.layout.addWidget(self.between_all)
 
-        # Save button + logic
         self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(self.save_action)
         self.layout.addWidget(self.save_button)
 
-        # Back button + logic
         self.back_button = QPushButton("Back")
         self.back_button.clicked.connect(self.main_app.switch_to_main_view)
         self.layout.addWidget(self.back_button)
@@ -72,7 +67,6 @@ class WaitUI(QtWidgets.QWidget):
         self.wait_time = None
 
     def save_action(self):
-        # Capture the text from the QLineEdit
         wait_time_str = self.text_input.text()
         try:
             wait_time = float(wait_time_str)

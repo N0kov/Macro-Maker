@@ -26,22 +26,25 @@ class TypeText(Action):
         else:
             self.series = list(phrase)
 
+    # def run(self):
+    #     self.multi_input()
+
     def run(self):
-        self.multi_input(0)
+        def multi_input(i):
+            if i < len(self.series) - 1:
+                with keyboard.pressed(self.series[i]):
+                    i += 1
+                    multi_input(i)
+            else:
+                keyboard.press(self.series[i])
+                keyboard.release(self.series[i])
+
+        multi_input(0)
 
     def __str__(self):
         if self.series:
             return "Typing: " + ", ".join(map(str, self.series))
         return ""
-
-    def multi_input(self, i):
-        if i < len(self.series) - 1:
-            with keyboard.pressed(self.series[i]):
-                i += 1
-                self.multi_input(i)
-        else:
-            keyboard.press(self.series[i])
-            keyboard.release(self.series[i])
 
     def setup_series(self, phrase):
         while len(phrase) != 0:
@@ -117,16 +120,3 @@ class TypeTextUI(QtWidgets.QWidget):
         action = TypeText(phrase)
         self.main_app.add_action(action)
         self.main_app.switch_to_main_view()  # Switch back to the main view
-
-    # def save_action(self):  # Currently the class handles errors, but this is here if I decide to revert that
-    #     # Capture the text from the QLineEdit       # - would make it easier to give an error popup
-    #     phrase = self.text_input.text()
-    #     try:
-    #         action = TypeText(phrase)
-    #         self.main_app.add_action(action)
-    #         self.main_app.switch_to_main_view()  # Switch back to the main view
-    #     except AttributeError:
-    #         QtWidgets.QMessageBox.warning(self, "Invalid Input",
-    #                                       "You need to input valid commands.\nEither single letters,"
-    #                                       "like v, c and x and / or a valid command like ctrl, alt or left.\n\n"
-    #                                       "You can see all commands here: https://pynput.readthedocs.io/en/latest/keyboard.html")

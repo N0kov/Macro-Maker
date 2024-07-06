@@ -8,6 +8,7 @@ from ImageConditions import ImageConfigView
 from actions import ClickXUI, WaitUI, MouseToUI, TypeTextUI, SwipeXyUi
 from PyQt5.QtCore import Qt, QPoint
 
+
 class MacroManagerMain(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -121,11 +122,14 @@ class MacroManagerMain(QMainWindow):
                     break
             for action in self.actions:
                 if not continue_script():
+                    print("ran")
                     return
                 action.run()
             if not run_infinite:  # This was causing issues when I had this if statement and the if below on one line
+                print("ran")
                 return
             if not continue_script():
+                print("ran")
                 return
 
     def save_actions(self):
@@ -203,7 +207,7 @@ class MacroManagerMain(QMainWindow):
 
     def add_wait_between_all(self, wait):
         if self.actions:
-            for i in range(len(self.actions) - 1, 0, -1):
+            for i in range(len(self.actions) - 1, -1, -1):
                 if not isinstance(self.actions[i], Wait):
                     if not isinstance(self.actions[i - 1], Wait):
                         self.actions.insert(i, wait)

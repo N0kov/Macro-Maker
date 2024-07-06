@@ -53,7 +53,7 @@ class TypeText(Action):
                 phrase = ''
 
     def clean_input(self):
-        wasd = [getattr(Key, "up"), getattr(Key, "right"), getattr(Key, "down"), getattr(Key, "left")]
+        directions = [getattr(Key, "up"), getattr(Key, "right"), getattr(Key, "down"), getattr(Key, "left")]
         temp_series = [] + self.series
         self.series.clear()
 
@@ -61,7 +61,7 @@ class TypeText(Action):
             if len(temp_series[i]) > 1:
                 try:  # Crashes if you try to do a getattr with something like altt so need a try except
                     temp_key = getattr(Key, (temp_series[i]))
-                    if temp_key not in wasd:
+                    if temp_key not in directions:
                         self.series.insert(0, getattr(Key, (temp_series[i])))
                     else:
                         self.series.append(temp_key)

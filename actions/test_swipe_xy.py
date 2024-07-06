@@ -5,7 +5,6 @@ from actions import swipe_xy
 
 
 class TestSwipeXY(TestCase):
-    pass
 
     def test_coordinate_passing_valid_data(self):
         start_coordinates = (30, 500)

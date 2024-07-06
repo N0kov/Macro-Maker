@@ -3,7 +3,6 @@ import pickle
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtWidgets import *
 from actions import Wait
-import Listener
 from Listener import start_listener, continue_script
 from ImageConditions import ImageConfigView
 from actions import ClickXUI, WaitUI, MouseToUI, TypeTextUI, SwipeXyUi
@@ -113,7 +112,7 @@ class MacroManagerMain(QMainWindow):
             run_infinite = True
 
         start_listener()
-        print(run_infinite)
+        print("running, infinite = " + str(run_infinite))
 
         while True:
             while continue_script():
@@ -124,9 +123,7 @@ class MacroManagerMain(QMainWindow):
                 if not continue_script():
                     return
                 action.run()
-            if not run_infinite:
-                print(run_infinite)
-                print(Listener.running)
+            if not run_infinite:  # This was causing issues when I had this if statement and the if below on one line
                 return
             if not continue_script():
                 return

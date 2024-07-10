@@ -62,10 +62,10 @@ class MacroManagerMain(QMainWindow):
         actions_layout = QVBoxLayout(actions_frame)
         actions_label = QLabel("Actions")
 
-        self.action_list = QListWidget()  # Setting custom logic for the action list - dragging, right click menu
-        self.action_list.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.action_list = QListWidget()   # action_list has custom logic
+        self.action_list.setContextMenuPolicy(Qt.CustomContextMenu)  # Right click
         self.action_list.customContextMenuRequested.connect(self.right_click_actions_menu)
-        self.action_list.setDragDropMode(QAbstractItemView.DragDrop)
+        self.action_list.setDragDropMode(QAbstractItemView.DragDrop)  # Dragging
         self.action_list.start_pos = None
         self.action_list.end_pos = None
         self.action_list.startDrag = self.start_drag
@@ -91,7 +91,7 @@ class MacroManagerMain(QMainWindow):
 
         self.image_list = QListWidget()
         self.image_list.itemClicked.connect(self.display_selected_image)
-        self.image_list.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.image_list.setContextMenuPolicy(Qt.CustomContextMenu)  # Right click menu
         self.image_list.customContextMenuRequested.connect(self.right_click_actions_menu)
         conditions_layout.addWidget(self.image_list)
 
@@ -142,24 +142,18 @@ class MacroManagerMain(QMainWindow):
                 print("ran")
                 return
 
-    def start_drag(self, supportedActions):
+    def start_drag(self, supported_actions):
         self.action_list.start_pos = self.action_list.currentRow()
         self.action_list.dragged_item = self.action_list.currentItem()
-        super(QListWidget, self.action_list).startDrag(Qt.MoveAction)
+        super(QListWidget, self.action_list).startDrag(supported_actions)
 
     def drop_event(self, event):
         end_pos = self.action_list.indexAt(event.pos()).row()
-        print(self.actions)
         if self.action_list.dragged_item:
-            print(f"Item: {self.action_list.dragged_item.text()}, Start: {self.action_list.start_pos}, End: {end_pos}")
-            if end_pos > self.action_list.start_pos:
-                action = self.actions.pop(self.action_list.start_pos + 1)
-            else:
-                action = self.actions.pop(self.action_list.start_pos)
+            action = self.actions.pop(self.action_list.start_pos)
             self.actions.insert(end_pos, action)
-        self.update_action_list()
-        print(self.actions)
         super(QListWidget, self.action_list).dropEvent(event)
+        self.update_action_list()
 
     def save_actions(self):
         options = QFileDialog.Options()

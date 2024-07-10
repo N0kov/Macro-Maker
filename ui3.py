@@ -6,7 +6,8 @@ from actions import Wait
 from Listener import start_listener, continue_script
 from ImageConditions import ImageConfigView
 from actions import ClickXUI, WaitUI, MouseToUI, TypeTextUI, SwipeXyUi
-from PyQt5.QtCore import Qt, QPoint
+from PyQt5.QtCore import Qt, QPoint, QMimeData
+from PyQt5.QtGui import QDrag
 
 
 class MacroManagerMain(QMainWindow):
@@ -32,19 +33,23 @@ class MacroManagerMain(QMainWindow):
 
         # Top buttons
         top_layout = QHBoxLayout()
-        self.run_button = QPushButton("Run options (press shift to kill the script)")
+        self.run_button = QPushButton("Run (press shift to kill the script)")
         self.run_button.clicked.connect(self.run_actions)
 
-        self.run_combo = QComboBox()
-        self.run_combo.addItem("Run once")
-        self.run_combo.addItem("Run infinitely")
+        # self.run_combo = QComboBox()
+        # self.run_combo.addItem("Run once")
+        # self.run_combo.addItem("Run infinitely")
+
+        self.run_options = QMenu("Run options", self)
+
 
         self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(self.save_actions)
         self.load_button = QPushButton("Load")
         self.load_button.clicked.connect(self.load_actions)
         top_layout.addWidget(self.run_button)
-        top_layout.addWidget(self.run_combo)
+        # top_layout.addWidget(self.run_combo)
+        top_layout.addWidget(self.run_options)
         top_layout.addWidget(self.save_button)
         top_layout.addWidget(self.load_button)
         main_layout.addLayout(top_layout)
@@ -56,9 +61,16 @@ class MacroManagerMain(QMainWindow):
         actions_frame.setFrameShape(QFrame.StyledPanel)
         actions_layout = QVBoxLayout(actions_frame)
         actions_label = QLabel("Actions")
-        self.action_list = QListWidget()
+
+        self.action_list = QListWidget()  # Setting custom logic for the action list - dragging, right click menu
         self.action_list.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.action_list.customContextMenuRequested.connect(self.right_click_menu)
+        self.action_list.customContextMenuRequested.connect(self.right_click_actions_menu)
+        self.action_list.setDragDropMode(QAbstractItemView.DragDrop)
+        self.action_list.start_pos = None
+        self.action_list.end_pos = None
+        self.action_list.startDrag = self.start_drag
+        self.action_list.dropEvent = self.drop_event
+
         actions_layout.addWidget(actions_label)
         actions_layout.addWidget(self.action_list)
 
@@ -80,7 +92,7 @@ class MacroManagerMain(QMainWindow):
         self.image_list = QListWidget()
         self.image_list.itemClicked.connect(self.display_selected_image)
         self.image_list.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.image_list.customContextMenuRequested.connect(self.right_click_menu)
+        self.image_list.customContextMenuRequested.connect(self.right_click_actions_menu)
         conditions_layout.addWidget(self.image_list)
 
         self.add_condition_button = QPushButton("+")
@@ -129,6 +141,25 @@ class MacroManagerMain(QMainWindow):
             if not continue_script():
                 print("ran")
                 return
+
+    def start_drag(self, supportedActions):
+        self.action_list.start_pos = self.action_list.currentRow()
+        self.action_list.dragged_item = self.action_list.currentItem()
+        super(QListWidget, self.action_list).startDrag(Qt.MoveAction)
+
+    def drop_event(self, event):
+        end_pos = self.action_list.indexAt(event.pos()).row()
+        print(self.actions)
+        if self.action_list.dragged_item:
+            print(f"Item: {self.action_list.dragged_item.text()}, Start: {self.action_list.start_pos}, End: {end_pos}")
+            if end_pos > self.action_list.start_pos:
+                action = self.actions.pop(self.action_list.start_pos + 1)
+            else:
+                action = self.actions.pop(self.action_list.start_pos)
+            self.actions.insert(end_pos, action)
+        self.update_action_list()
+        print(self.actions)
+        super(QListWidget, self.action_list).dropEvent(event)
 
     def save_actions(self):
         options = QFileDialog.Options()
@@ -202,7 +233,6 @@ class MacroManagerMain(QMainWindow):
         self.actions.append(action)
         self.update_action_list()
 
-
     def add_wait_between_all(self, wait):
         if self.actions:
             for i in range(len(self.actions) - 1, -1, -1):
@@ -241,7 +271,7 @@ class MacroManagerMain(QMainWindow):
         pixmap = condition.get_image()
         self.image_label.setPixmap(pixmap.scaled(self.image_label.size(), QtCore.Qt.KeepAspectRatio))
 
-    def right_click_menu(self, position: QPoint):
+    def right_click_actions_menu(self, position: QPoint):
         # Options
         sender = self.sender()
         menu = QMenu()

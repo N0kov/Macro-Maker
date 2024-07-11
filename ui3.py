@@ -6,8 +6,8 @@ from actions import Wait
 from Listener import start_listener, continue_script
 from ImageConditions import ImageConfigView
 from actions import ClickXUI, WaitUI, MouseToUI, TypeTextUI, SwipeXyUi
-from PyQt5.QtCore import Qt, QPoint, QMimeData
-from PyQt5.QtGui import QDrag
+from PyQt5.QtCore import Qt, QPoint
+from run_count_popup import RunCountPopup
 
 
 class MacroManagerMain(QMainWindow):
@@ -33,22 +33,23 @@ class MacroManagerMain(QMainWindow):
 
         # Top buttons
         top_layout = QHBoxLayout()
-        self.run_button = QPushButton("Run (press shift to kill the script)")
+        self.run_button = QPushButton("Run")
+        self.run_button.setToolTip("Press shift to kill the script")
         self.run_button.clicked.connect(self.run_actions)
 
-        # self.run_combo = QComboBox()
-        # self.run_combo.addItem("Run once")
-        # self.run_combo.addItem("Run infinitely")
+        self.run_options = QComboBox()
+        self.run_options.addItem("Run once")
+        self.run_options.addItem("Run infinitely")
+        self.run_options.addItem("Run x times")
+        self.run_options.currentIndexChanged.connect(self.run_options_clicked)
 
-        self.run_options = QMenu("Run options", self)
-
+        self.run_count = 1
 
         self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(self.save_actions)
         self.load_button = QPushButton("Load")
         self.load_button.clicked.connect(self.load_actions)
         top_layout.addWidget(self.run_button)
-        # top_layout.addWidget(self.run_combo)
         top_layout.addWidget(self.run_options)
         top_layout.addWidget(self.save_button)
         top_layout.addWidget(self.load_button)
@@ -67,7 +68,6 @@ class MacroManagerMain(QMainWindow):
         self.action_list.customContextMenuRequested.connect(self.right_click_actions_menu)
         self.action_list.setDragDropMode(QAbstractItemView.DragDrop)  # Dragging
         self.action_list.start_pos = None
-        self.action_list.end_pos = None
         self.action_list.startDrag = self.start_drag
         self.action_list.dropEvent = self.drop_event
 
@@ -118,29 +118,54 @@ class MacroManagerMain(QMainWindow):
         if not self.actions:  # So processing power isn't wasted running a script that will trigger nothing
             return
 
-        run_infinite = False
-        if self.run_combo.currentText() == "Run infinitely":
-            run_infinite = True
-
-        start_listener()
-        print("running, infinite = " + str(run_infinite))
-
-        while True:
+        def check_images():
             while continue_script():
                 if not any(not image.run() for image in self.present_images) or any(
                         image.run() for image in self.absent_images):
-                    break
+                    return
+
+        def actions_run():
             for action in self.actions:
                 if not continue_script():
-                    print("ran")
                     return
                 action.run()
-            if not run_infinite:  # This was causing issues when I had this if statement and the if below on one line
-                print("ran")
-                return
-            if not continue_script():
-                print("ran")
-                return
+
+        def run_loop():
+            check_images()
+            if continue_script():
+                actions_run()
+
+        start_listener()
+
+        if self.run_count > 0:
+            for _ in range(self.run_count):
+                if not continue_script():
+                    break
+                run_loop()
+
+        elif self.run_count == - 1:
+            while continue_script():
+                run_loop()
+
+
+    def run_options_clicked(self, option):
+        if self.run_options.itemText(option) == "Run once":
+            self.run_count = 1
+        elif self.run_options.itemText(option) == "Run infinitely":
+            self.run_count = -1
+
+        else:
+            popup = RunCountPopup(self)
+            if popup.exec_() == QDialog.Accepted:
+                run_count = popup.runs
+                if run_count == 1:
+                    self.run_options.setCurrentIndex(0)
+                elif run_count > 1:
+                    if self.run_options.count() < 4:
+                        self.run_options.insertItem(2, "")
+                    self.run_options.setItemText(2, "Run " + str(run_count) + " times")
+                    self.run_options.setCurrentIndex(2)
+                self.run_count = run_count
 
     def start_drag(self, supported_actions):
         self.action_list.start_pos = self.action_list.currentRow()
@@ -266,18 +291,15 @@ class MacroManagerMain(QMainWindow):
         self.image_label.setPixmap(pixmap.scaled(self.image_label.size(), QtCore.Qt.KeepAspectRatio))
 
     def right_click_actions_menu(self, position: QPoint):
-        # Options
         sender = self.sender()
         menu = QMenu()
         remove_item = menu.addAction("Remove")
 
         if sender == self.action_list or sender == self.image_list:
 
-            # Aligning the right click box
-            global_position = sender.viewport().mapToGlobal(position)
+            global_position = sender.viewport().mapToGlobal(position)  # Aligning the right click box
             selected_action = menu.exec_(global_position)
 
-            # Remove clicked
             if selected_action == remove_item:
                 item = sender.itemAt(position)
                 if item is not None:

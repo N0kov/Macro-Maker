@@ -7,7 +7,13 @@ hotkey = Key.f8
 
 
 def change_hotkey(new_hotkey):
-    pass
+    global hotkey
+    hotkey = []
+    for key in new_hotkey:
+        if len(key) > 1:
+            hotkey.append(getattr(Key, key))
+        else:
+            hotkey.append(key)
 
 
 def on_press(key):

@@ -56,7 +56,7 @@ class TypeText(Action):
                 phrase = ''
 
     def clean_input(self):
-        directions = [getattr(Key, "up"), getattr(Key, "right"), getattr(Key, "down"), getattr(Key, "left")]
+        directions = [Key.up, Key.right, Key.down, Key.left]
         temp_series = [] + self.series
         self.series.clear()
 

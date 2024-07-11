@@ -8,6 +8,8 @@ from ImageConditions import ImageConfigView
 from actions import ClickXUI, WaitUI, MouseToUI, TypeTextUI, SwipeXyUi
 from PyQt5.QtCore import Qt, QPoint
 from run_count_popup import RunCountPopup
+from hotkey_popup import HotkeyPopup
+from pynput.keyboard import Key
 
 
 class MacroManagerMain(QMainWindow):
@@ -31,10 +33,13 @@ class MacroManagerMain(QMainWindow):
         self.main_view = QWidget()
         main_layout = QVBoxLayout(self.main_view)
 
+        self.hotkey_pretty = "f8"  # This needs to be at the top as the run tooltip needs it
+        self.hotkey_useful = [Key.f8]
+
         # Top buttons
         top_layout = QHBoxLayout()
         self.run_button = QPushButton("Run")
-        self.run_button.setToolTip("Press shift to kill the script")
+        self.run_button.setToolTip("Press " + str(self.hotkey_pretty) + " to kill the script")
         self.run_button.clicked.connect(self.run_actions)
 
         self.run_options = QComboBox()
@@ -43,7 +48,10 @@ class MacroManagerMain(QMainWindow):
         self.run_options.addItem("Run x times")
         self.run_options.currentIndexChanged.connect(self.run_options_clicked)
 
-        self.run_count = 1
+        self.run_count = 1  # The amount of times the script will run, associated with run_options
+
+        self.activation_key_button = QPushButton("Click to change the start / stop hotkey")
+        self.activation_key_button.clicked.connect(self.hotkey_clicked)
 
         self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(self.save_actions)
@@ -51,6 +59,7 @@ class MacroManagerMain(QMainWindow):
         self.load_button.clicked.connect(self.load_actions)
         top_layout.addWidget(self.run_button)
         top_layout.addWidget(self.run_options)
+        top_layout.addWidget(self.activation_key_button)
         top_layout.addWidget(self.save_button)
         top_layout.addWidget(self.load_button)
         main_layout.addLayout(top_layout)
@@ -147,25 +156,37 @@ class MacroManagerMain(QMainWindow):
             while continue_script():
                 run_loop()
 
-
     def run_options_clicked(self, option):
         if self.run_options.itemText(option) == "Run once":
             self.run_count = 1
         elif self.run_options.itemText(option) == "Run infinitely":
             self.run_count = -1
 
-        else:
+        elif self.run_options.itemText(option) == "Run x times":
             popup = RunCountPopup(self)
             if popup.exec_() == QDialog.Accepted:
                 run_count = popup.runs
-                if run_count == 1:
-                    self.run_options.setCurrentIndex(0)
+                if run_count == 1:  # If they say they want it to run once
+                    self.run_options.setCurrentIndex(1)
                 elif run_count > 1:
                     if self.run_options.count() < 4:
                         self.run_options.insertItem(2, "")
                     self.run_options.setItemText(2, "Run " + str(run_count) + " times")
                     self.run_options.setCurrentIndex(2)
                 self.run_count = run_count
+            else:
+                if self.run_count == -1:  # If cancel is hit and they were on infinite
+                    self.run_options.setCurrentIndex(1) # Getting the index of infinite would be better as it can change
+                else:  # Else they'd be on one
+                    self.run_options.setCurrentIndex(0)
+
+    def hotkey_clicked(self):
+        popup = HotkeyPopup()
+        if popup.exec_() == QDialog.Accepted:
+            self.hotkey_useful = popup.key_combination
+            self.hotkey_pretty = ", ".join(self.hotkey_useful)
+            self.run_button.setToolTip("Press " + str(self.hotkey_pretty) + " to kill the script")
+            print(self.hotkey_useful)
 
     def start_drag(self, supported_actions):
         self.action_list.start_pos = self.action_list.currentRow()

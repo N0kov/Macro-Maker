@@ -1,13 +1,19 @@
 from pynput.keyboard import Key, Listener
 
-running = True
+running = False
 listener = None
 
+hotkey = Key.f8
 
-def on_press(key):  # Update this to allow picking the key to listen for. Should just require a getattr
+
+def change_hotkey(new_hotkey):
+    pass
+
+
+def on_press(key):
     global running, listener
     try:
-        if key == Key.shift:
+        if key == hotkey:
             running = False
             if listener is not None:
                 listener.stop()
@@ -40,5 +46,3 @@ def wait_for_shift_press():
     while continue_script():
         pass
     stop_listener()
-
-start_listener()

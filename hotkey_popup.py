@@ -45,7 +45,7 @@ class HotkeyPopup(QDialog):
             captured_keys = ", ".join(self.key_combination)
         else:
             captured_keys = "No keys captured"
-        self.label.setText("Recording stopped. The hotkey is " + str(captured_keys))
+        self.label.setText("Hotkey: " + str(captured_keys))
         self.start_button.setEnabled(True)
         self.releaseKeyboard()
 
@@ -96,18 +96,25 @@ class HotkeyPopup(QDialog):
                 Qt.Key_Clear: 'clear'
             }
 
+            key_name = None
+
             if key in special_keys:
                 key_name = special_keys[key]
             else:
                 try:
                     key_name = chr(key)
                 except ValueError:  # If you hit a modifier key that isn't defined above
-                    key_name = f'Key_{key}'
+                    self.label.setText("Invalid key")
 
-            if key_name not in self.key_combination:
-                self.key_combination.append(key_name)
-                self.label.setText(f"Capturing: {', '.join(self.key_combination)}")  # Don't like printf but not sure
-                                                                                     # how to represent this otherwise
+            if key_name:
+                if key_name not in self.key_combination:
+                    self.key_combination.append(key_name)
+                    self.label.setText(f"Capturing: {', '.join(self.key_combination)}")  # Don't like printf but not
+                                                                                # sure how to represent this otherwise
+
+            if len(self.key_combination) >= 1:  # I'm currently not sure how to work the listener to adapt to multiple
+                self.recording = False       # keys at once, so key count is being capped at one for the time being
+                self.stop_recording()
 
     def keyReleaseEvent(self, event):
         if self.recording:

@@ -1,6 +1,6 @@
 from actions.action import Action
 from MouseShortcuts import move_between, check_valid_input
-from Listener import wait_for_shift_press
+from Listener import wait_for_key_press
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import QVBoxLayout, QLabel, QPushButton
 from pynput.mouse import Controller
@@ -10,10 +10,10 @@ class SwipeXY(Action):
     def __init__(self, start = None, end = None):
         if start is None or end is None:
             print("Move your mouse to the desired start position. Press shift when ready.", end="")
-            wait_for_shift_press()
+            wait_for_key_press()
             self.start = (Controller().position[0], Controller().position[1])
             print("\nMove your mouse to the desired end position. Press shift when ready.", end="")
-            wait_for_shift_press()
+            wait_for_key_press()
             self.end = (Controller().position[0], Controller().position[1])
             print()  # Clearing the end="" from above
         else:

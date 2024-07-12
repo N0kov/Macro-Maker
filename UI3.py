@@ -1,15 +1,16 @@
+import _pickle
 import sys
 import pickle
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtWidgets import *
-from actions import Wait
-from Listener import start_listener, continue_script
+from Listener import *
 from ImageConditions import ImageConfigView
-from actions import ClickXUI, WaitUI, MouseToUI, TypeTextUI, SwipeXyUi
+from actions import ClickXUI, WaitUI, MouseToUI, TypeTextUI, SwipeXyUi, Wait
 from PyQt5.QtCore import Qt, QPoint
 from run_count_popup import RunCountPopup
 from hotkey_popup import HotkeyPopup
 from pynput.keyboard import Key
+import threading
 
 
 class MacroManagerMain(QMainWindow):
@@ -19,6 +20,10 @@ class MacroManagerMain(QMainWindow):
         self.actions = []
         self.present_images = []
         self.absent_images = []
+
+        self.start_global_listener()  # Thread stuff - for checking actions and one for running actions
+        self.run_action_condition = threading.Condition()
+        self.start_action_thread()
 
         self.setWindowTitle("Macro Manager")
         self.setGeometry(400, 200, 1100, 700)
@@ -33,14 +38,15 @@ class MacroManagerMain(QMainWindow):
         self.main_view = QWidget()
         main_layout = QVBoxLayout(self.main_view)
 
-        self.hotkey_pretty = "f8"  # This needs to be at the top as the run tooltip needs it
+        self.hotkey_pretty = "f8"  # Extra needed parameters
         self.hotkey_useful = [Key.f8]
+        self.running_actions = False
 
         # Top buttons
         top_layout = QHBoxLayout()
         self.run_button = QPushButton("Run")
         self.run_button.setToolTip("Press " + str(self.hotkey_pretty) + " to kill the script")
-        self.run_button.clicked.connect(self.run_actions)
+        self.run_button.clicked.connect(self.notify_action_thread)
 
         self.run_options = QComboBox()
         self.run_options.addItem("Run once")
@@ -128,33 +134,64 @@ class MacroManagerMain(QMainWindow):
             return
 
         def check_images():
-            while continue_script():
+            while self.running_actions:
                 if not any(not image.run() for image in self.present_images) or any(
                         image.run() for image in self.absent_images):
                     return
 
         def actions_run():
             for action in self.actions:
-                if not continue_script():
+                if not self.running_actions:
                     return
                 action.run()
 
         def run_loop():
             check_images()
-            if continue_script():
+            if self.running_actions:
                 actions_run()
-
-        start_listener()
 
         if self.run_count > 0:
             for _ in range(self.run_count):
-                if not continue_script():
+                if not self.running_actions:
                     break
                 run_loop()
 
         elif self.run_count == - 1:
-            while continue_script():
+            while self.running_actions:
                 run_loop()
+
+    def start_global_listener(self):
+        self.listener_thread = threading.Thread(target=self.run_listener, daemon=True)
+        self.listener_thread.start()
+
+    def start_action_thread(self):
+        self.action_thread = threading.Thread(target=self.run_action_thread, daemon=True)
+        self.action_thread.start()
+
+    def run_listener(self):
+        start_listener(self.on_hotkey_pressed)
+
+    def run_action_thread(self):
+        while True:
+            with self.run_action_condition:
+                self.run_action_condition.wait()
+
+            self.run_actions()
+
+            self.running_actions = False
+
+    def notify_action_thread(self):
+        self.running_actions = True
+        with self.run_action_condition:
+            self.run_action_condition.notify()
+
+    def on_hotkey_pressed(self):
+        if not self.running_actions:
+            self.notify_action_thread()
+        else:
+            self.running_actions = False
+        if not self.listener_thread.is_alive():
+            self.run_listener()
 
     def run_options_clicked(self, option):
         if self.run_options.itemText(option) == "Run once":
@@ -177,7 +214,7 @@ class MacroManagerMain(QMainWindow):
             else:
                 if self.run_count == -1:  # If cancel is hit and they were on infinite
                     self.run_options.setCurrentIndex(1) # Getting the index of infinite would be better as it can change
-                else:  # Else they'd be on one
+                else:
                     self.run_options.setCurrentIndex(0)
 
     def hotkey_clicked(self):
@@ -186,7 +223,7 @@ class MacroManagerMain(QMainWindow):
             self.hotkey_useful = popup.key_combination
             self.hotkey_pretty = ", ".join(self.hotkey_useful)
             self.run_button.setToolTip("Press " + str(self.hotkey_pretty) + " to kill the script")
-            print(self.hotkey_useful)
+            change_hotkey(self.hotkey_useful)
 
     def start_drag(self, supported_actions):
         self.action_list.start_pos = self.action_list.currentRow()
@@ -206,7 +243,7 @@ class MacroManagerMain(QMainWindow):
         file_name, _ = QFileDialog.getSaveFileName(self, "Save Actions", "",
                                                    "All Files (*);;Pickle Files (*.pkl)", options=options)
         if file_name:
-            print(f"Saving actions to {file_name}...")
+            print(f"Saving to {file_name}")
             with open(file_name, 'wb') as f:
                 pickle.dump([self.actions, self.present_images, self.absent_images], f)
 
@@ -214,15 +251,18 @@ class MacroManagerMain(QMainWindow):
         options = QFileDialog.Options()
         file_name, _ = QFileDialog.getOpenFileName(self, "Load Actions", "",
                                                    "All Files (*);;Pickle Files (*.pkl)", options=options)
-        if file_name:
-            print(f"Loading actions from {file_name}...")
-            with open(file_name, 'rb') as f:
-                functions = pickle.load(f)
-            self.actions.extend(functions[0])
-            self.present_images.extend(functions[1])
-            self.absent_images.extend(functions[2])
-            self.update_action_list()
-            self.update_condition_list()
+        try:
+            if file_name:
+                print(f"Loading from {file_name}")
+                with open(file_name, 'rb') as f:
+                    functions = pickle.load(f)
+                self.actions.extend(functions[0])
+                self.present_images.extend(functions[1])
+                self.absent_images.extend(functions[2])
+                self.update_action_list()
+                self.update_condition_list()
+        except _pickle.UnpicklingError:  # If you click on a non pickle file
+            pass
 
     def switch_to_add_action_view(self):
         self.action_config_view = QWidget()

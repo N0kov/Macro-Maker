@@ -1,33 +1,53 @@
 from pynput.keyboard import Key, Listener
 
-running = True
+
+running = False
 listener = None
+callback = None
+hotkey = [Key.f8]
 
 
-def on_press(key):  # Update this to allow picking the key to listen for. Should just require a getattr
+def change_hotkey(new_hotkey):
+    global hotkey
+    hotkey = []
+    for key in new_hotkey:
+        if len(key) > 1:
+            hotkey.append(getattr(Key, key))
+        else:
+            hotkey.append(key)
+
+
+def on_press(key):
     global running, listener
     try:
-        if key == Key.shift:
+        if key == hotkey[0]:
             running = False
             if listener is not None:
-                listener.stop()
+                stop_listener()
+                if callback:  # For if we're doing threading
+                    callback()
                 return False
-    except AttributeError:
-        pass
-
-
-def start_listener():
-    global listener, running
-    running = True
-    listener = Listener(on_press=on_press)
-    listener.start()
+    except Exception as e:  # Very occasional X11 errors seem to happen that don't break anything, but it's better
+        print("In on_press, " + str(e) + " happened")  # to not have them happen. Same goes for stop_listener
 
 
 def stop_listener():
     global listener
-    if listener is not None:
-        listener.stop()
-        listener = None
+    try:
+        if listener is not None:
+            listener.stop()
+            listener = None
+    except Exception as e:
+        print("In stop_listener, " + str(e) + " happened")
+
+
+def start_listener(script=None):
+    global listener, running, callback
+    running = True
+    if script is not None:
+        callback = script  # If we're threading use this
+    listener = Listener(on_press=on_press)
+    listener.start()
 
 
 def continue_script():
@@ -35,10 +55,8 @@ def continue_script():
     return running
 
 
-def wait_for_shift_press():
+def wait_for_key_press():
     start_listener()
     while continue_script():
         pass
     stop_listener()
-
-start_listener()

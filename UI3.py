@@ -1,12 +1,16 @@
+import _pickle
 import sys
 import pickle
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtWidgets import *
-from actions import Wait
-from Listener import start_listener, continue_script
+from Listener import *
 from ImageConditions import ImageConfigView
-from actions import ClickXUI, WaitUI, MouseToUI, TypeTextUI, SwipeXyUi
+from actions import ClickXUI, WaitUI, MouseToUI, TypeTextUI, SwipeXyUi, Wait
 from PyQt5.QtCore import Qt, QPoint
+from run_count_popup import RunCountPopup
+from hotkey_popup import HotkeyPopup
+from pynput.keyboard import Key
+import threading
 
 
 class MacroManagerMain(QMainWindow):
@@ -16,6 +20,10 @@ class MacroManagerMain(QMainWindow):
         self.actions = []
         self.present_images = []
         self.absent_images = []
+
+        self.start_global_listener()  # Thread stuff - for checking actions and one for running actions
+        self.run_action_condition = threading.Condition()
+        self.start_action_thread()
 
         self.setWindowTitle("Macro Manager")
         self.setGeometry(400, 200, 1100, 700)
@@ -30,21 +38,34 @@ class MacroManagerMain(QMainWindow):
         self.main_view = QWidget()
         main_layout = QVBoxLayout(self.main_view)
 
+        self.hotkey_pretty = "f8"  # Extra needed parameters
+        self.hotkey_useful = [Key.f8]
+        self.running_actions = False
+
         # Top buttons
         top_layout = QHBoxLayout()
-        self.run_button = QPushButton("Run options (press shift to kill the script)")
-        self.run_button.clicked.connect(self.run_actions)
+        self.run_button = QPushButton("Run")
+        self.run_button.setToolTip("Press " + str(self.hotkey_pretty) + " to kill the script")
+        self.run_button.clicked.connect(self.notify_action_thread)
 
-        self.run_combo = QComboBox()
-        self.run_combo.addItem("Run once")
-        self.run_combo.addItem("Run infinitely")
+        self.run_options = QComboBox()
+        self.run_options.addItem("Run once")
+        self.run_options.addItem("Run infinitely")
+        self.run_options.addItem("Run x times")
+        self.run_options.currentIndexChanged.connect(self.run_options_clicked)
+
+        self.run_count = 1  # The amount of times the script will run, associated with run_options
+
+        self.activation_key_button = QPushButton("Click to change the start / stop hotkey")
+        self.activation_key_button.clicked.connect(self.hotkey_clicked)
 
         self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(self.save_actions)
         self.load_button = QPushButton("Load")
         self.load_button.clicked.connect(self.load_actions)
         top_layout.addWidget(self.run_button)
-        top_layout.addWidget(self.run_combo)
+        top_layout.addWidget(self.run_options)
+        top_layout.addWidget(self.activation_key_button)
         top_layout.addWidget(self.save_button)
         top_layout.addWidget(self.load_button)
         main_layout.addLayout(top_layout)
@@ -56,9 +77,15 @@ class MacroManagerMain(QMainWindow):
         actions_frame.setFrameShape(QFrame.StyledPanel)
         actions_layout = QVBoxLayout(actions_frame)
         actions_label = QLabel("Actions")
-        self.action_list = QListWidget()
-        self.action_list.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.action_list.customContextMenuRequested.connect(self.right_click_menu)
+
+        self.action_list = QListWidget()   # action_list has custom logic
+        self.action_list.setContextMenuPolicy(Qt.CustomContextMenu)  # Right click
+        self.action_list.customContextMenuRequested.connect(self.right_click_actions_menu)
+        self.action_list.setDragDropMode(QAbstractItemView.DragDrop)  # Dragging
+        self.action_list.start_pos = None
+        self.action_list.startDrag = self.start_drag
+        self.action_list.dropEvent = self.drop_event
+
         actions_layout.addWidget(actions_label)
         actions_layout.addWidget(self.action_list)
 
@@ -79,8 +106,8 @@ class MacroManagerMain(QMainWindow):
 
         self.image_list = QListWidget()
         self.image_list.itemClicked.connect(self.display_selected_image)
-        self.image_list.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.image_list.customContextMenuRequested.connect(self.right_click_menu)
+        self.image_list.setContextMenuPolicy(Qt.CustomContextMenu)  # Right click menu
+        self.image_list.customContextMenuRequested.connect(self.right_click_actions_menu)
         conditions_layout.addWidget(self.image_list)
 
         self.add_condition_button = QPushButton("+")
@@ -106,36 +133,117 @@ class MacroManagerMain(QMainWindow):
         if not self.actions:  # So processing power isn't wasted running a script that will trigger nothing
             return
 
-        run_infinite = False
-        if self.run_combo.currentText() == "Run infinitely":
-            run_infinite = True
-
-        start_listener()
-        print("running, infinite = " + str(run_infinite))
-
-        while True:
-            while continue_script():
+        def check_images():
+            while self.running_actions:
                 if not any(not image.run() for image in self.present_images) or any(
                         image.run() for image in self.absent_images):
-                    break
+                    return
+
+        def actions_run():
             for action in self.actions:
-                if not continue_script():
-                    print("ran")
+                if not self.running_actions:
                     return
                 action.run()
-            if not run_infinite:  # This was causing issues when I had this if statement and the if below on one line
-                print("ran")
-                return
-            if not continue_script():
-                print("ran")
-                return
+
+        def run_loop():
+            check_images()
+            if self.running_actions:
+                actions_run()
+
+        if self.run_count > 0:
+            for _ in range(self.run_count):
+                if not self.running_actions:
+                    break
+                run_loop()
+
+        elif self.run_count == - 1:
+            while self.running_actions:
+                run_loop()
+
+    def start_global_listener(self):
+        self.listener_thread = threading.Thread(target=self.run_listener, daemon=True)
+        self.listener_thread.start()
+
+    def start_action_thread(self):
+        self.action_thread = threading.Thread(target=self.run_action_thread, daemon=True)
+        self.action_thread.start()
+
+    def run_listener(self):
+        start_listener(self.on_hotkey_pressed)
+
+    def run_action_thread(self):
+        while True:
+            with self.run_action_condition:
+                self.run_action_condition.wait()
+
+            self.run_actions()
+
+            self.running_actions = False
+
+    def notify_action_thread(self):
+        self.running_actions = True
+        with self.run_action_condition:
+            self.run_action_condition.notify()
+
+    def on_hotkey_pressed(self):
+        if not self.running_actions:
+            self.notify_action_thread()
+        else:
+            self.running_actions = False
+        if not self.listener_thread.is_alive():
+            self.run_listener()
+
+    def run_options_clicked(self, option):
+        if self.run_options.itemText(option) == "Run once":
+            self.run_count = 1
+        elif self.run_options.itemText(option) == "Run infinitely":
+            self.run_count = -1
+
+        elif self.run_options.itemText(option) == "Run x times":
+            popup = RunCountPopup(self)
+            if popup.exec_() == QDialog.Accepted:
+                run_count = popup.runs
+                if run_count == 1:  # If they say they want it to run once
+                    self.run_options.setCurrentIndex(1)
+                elif run_count > 1:
+                    if self.run_options.count() < 4:
+                        self.run_options.insertItem(2, "")
+                    self.run_options.setItemText(2, "Run " + str(run_count) + " times")
+                    self.run_options.setCurrentIndex(2)
+                self.run_count = run_count
+            else:
+                if self.run_count == -1:  # If cancel is hit and they were on infinite
+                    self.run_options.setCurrentIndex(1) # Getting the index of infinite would be better as it can change
+                else:
+                    self.run_options.setCurrentIndex(0)
+
+    def hotkey_clicked(self):
+        popup = HotkeyPopup()
+        if popup.exec_() == QDialog.Accepted:
+            self.hotkey_useful = popup.key_combination
+            self.hotkey_pretty = ", ".join(self.hotkey_useful)
+            self.run_button.setToolTip("Press " + str(self.hotkey_pretty) + " to kill the script")
+            change_hotkey(self.hotkey_useful)
+
+    def start_drag(self, supported_actions):
+        self.action_list.start_pos = self.action_list.currentRow()
+        self.action_list.dragged_item = self.action_list.currentItem()
+        super(QListWidget, self.action_list).startDrag(supported_actions)
+
+    def drop_event(self, event):
+        end_pos = self.action_list.indexAt(event.pos()).row()
+        if self.action_list.dragged_item:
+            action = self.actions.pop(self.action_list.start_pos)
+            self.actions.insert(end_pos, action)
+        super(QListWidget, self.action_list).dropEvent(event)
+        self.update_action_list()
 
     def save_actions(self):
         options = QFileDialog.Options()
         file_name, _ = QFileDialog.getSaveFileName(self, "Save Actions", "",
                                                    "All Files (*);;Pickle Files (*.pkl)", options=options)
         if file_name:
-            print(f"Saving actions to {file_name}...")
+            print(f"Saving to {file_name}")
             with open(file_name, 'wb') as f:
                 pickle.dump([self.actions, self.present_images, self.absent_images], f)
 
@@ -143,15 +251,18 @@ class MacroManagerMain(QMainWindow):
         options = QFileDialog.Options()
         file_name, _ = QFileDialog.getOpenFileName(self, "Load Actions", "",
                                                    "All Files (*);;Pickle Files (*.pkl)", options=options)
-        if file_name:
-            print(f"Loading actions from {file_name}...")
-            with open(file_name, 'rb') as f:
-                functions = pickle.load(f)
-            self.actions.extend(functions[0])
-            self.present_images.extend(functions[1])
-            self.absent_images.extend(functions[2])
-            self.update_action_list()
-            self.update_condition_list()
+        try:
+            if file_name:
+                print(f"Loading from {file_name}")
+                with open(file_name, 'rb') as f:
+                    functions = pickle.load(f)
+                self.actions.extend(functions[0])
+                self.present_images.extend(functions[1])
+                self.absent_images.extend(functions[2])
+                self.update_action_list()
+                self.update_condition_list()
+        except _pickle.UnpicklingError:  # If you click on a non pickle file
+            pass
 
     def switch_to_add_action_view(self):
         self.action_config_view = QWidget()
@@ -202,7 +313,6 @@ class MacroManagerMain(QMainWindow):
         self.actions.append(action)
         self.update_action_list()
 
-
     def add_wait_between_all(self, wait):
         if self.actions:
             for i in range(len(self.actions) - 1, -1, -1):
@@ -241,19 +351,16 @@ class MacroManagerMain(QMainWindow):
         pixmap = condition.get_image()
         self.image_label.setPixmap(pixmap.scaled(self.image_label.size(), QtCore.Qt.KeepAspectRatio))
 
-    def right_click_menu(self, position: QPoint):
-        # Options
+    def right_click_actions_menu(self, position: QPoint):
         sender = self.sender()
         menu = QMenu()
         remove_item = menu.addAction("Remove")
 
         if sender == self.action_list or sender == self.image_list:
 
-            # Aligning the right click box
-            global_position = sender.viewport().mapToGlobal(position)
+            global_position = sender.viewport().mapToGlobal(position)  # Aligning the right click box
             selected_action = menu.exec_(global_position)
 
-            # Remove clicked
             if selected_action == remove_item:
                 item = sender.itemAt(position)
                 if item is not None:

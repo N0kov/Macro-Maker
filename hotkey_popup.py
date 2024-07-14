@@ -53,7 +53,7 @@ class HotkeyPopup(QDialog):
         if self.recording:
             key = event.key()
 
-            special_keys = {  # This is awful but event.key() with special characters is weird, so I'm doing this
+            special_keys = {  # This is awful but event.key() with special characters is wack, so I'm doing this
                 Qt.Key_Shift: 'shift',
                 Qt.Key_Control: 'ctrl',
                 Qt.Key_Alt: 'alt',
@@ -109,8 +109,7 @@ class HotkeyPopup(QDialog):
             if key_name:
                 if key_name not in self.key_combination:
                     self.key_combination.append(key_name)
-                    self.label.setText(f"Capturing: {', '.join(self.key_combination)}")  # Don't like printf but not
-                                                                                # sure how to represent this otherwise
+                    self.label.setText("Capturing: " + ', '.join(self.key_combination))
 
             if len(self.key_combination) >= 1:  # I'm currently not sure how to work the listener to adapt to multiple
                 self.recording = False       # keys at once, so key count is being capped at one for the time being

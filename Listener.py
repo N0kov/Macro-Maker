@@ -20,7 +20,7 @@ def change_hotkey(new_hotkey):
 def on_press(key):
     global running, listener
     try:
-        if key == hotkey[0]:
+        if key == hotkey[0]:  # Currently only single keys are allowed, as I don't know how to process multiple
             running = False
             if listener is not None:
                 stop_listener()

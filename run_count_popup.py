@@ -5,7 +5,6 @@ class RunCountPopup(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-
         self.setWindowTitle("Run count")
         self.setGeometry(550, 300, 270, 170)
 
@@ -33,9 +32,9 @@ class RunCountPopup(QDialog):
                 self.runs = int(self.runs)
                 if self.runs > 0:
                     super().accept()
-                else:
-                    self.run_label.setText("Enter the amount of times the script should run."
-                                           "\n\nThis must be a positive integer")
             except ValueError:
-                self.run_label.setText("Enter the amount of times the script should run."
-                                       "\n\nThis must be a positive integer")
+                pass
+
+            self.run_label.setText("Enter the amount of times the script should run."
+                                   "\n\nThis must be a positive integer")
+

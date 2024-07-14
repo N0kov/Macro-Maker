@@ -1,6 +1,6 @@
-import _pickle
 import sys
 import pickle
+import _pickle
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtWidgets import *
 from Listener import *
@@ -21,9 +21,9 @@ class MacroManagerMain(QMainWindow):
         self.present_images = []
         self.absent_images = []
 
-        self.start_global_listener()  # Thread stuff - for checking actions and one for running actions
-        self.run_action_condition = threading.Condition()
-        self.start_action_thread()
+        self.start_global_listener()  # Thread stuff - checking for the hotkey to run your script
+        self.run_action_condition = threading.Condition()   # Notification for the thread that runs the macro
+        self.start_action_thread()  # Thread that runs the macro
 
         self.setWindowTitle("Macro Manager")
         self.setGeometry(400, 200, 1100, 700)
@@ -38,9 +38,9 @@ class MacroManagerMain(QMainWindow):
         self.main_view = QWidget()
         main_layout = QVBoxLayout(self.main_view)
 
-        self.hotkey_pretty = "f8"  # Extra needed parameters
-        self.hotkey_useful = [Key.f8]
-        self.running_actions = False
+        self.hotkey_pretty = "f8"  # Extra needed parameters. pretty is the one that's displayed to the user
+        self.hotkey_useful = [Key.f8]   # The functional version of the hotkey. Not nice to look at though
+        self.running_actions = False    # Bool for if the macro is running or not
 
         # Top buttons
         top_layout = QHBoxLayout()
@@ -200,26 +200,37 @@ class MacroManagerMain(QMainWindow):
             self.run_count = -1
 
         elif self.run_options.itemText(option) == "Run x times":
-            popup = RunCountPopup(self)
+            self.run_options.blockSignals(True)  # The item selected changes during this def, retriggering
+            popup = RunCountPopup(self)  # run_options_clicked so the signal needs to be blocked
             if popup.exec_() == QDialog.Accepted:
                 run_count = popup.runs
                 if run_count == 1:  # If they say they want it to run once
                     self.run_options.setCurrentIndex(1)
+
                 elif run_count > 1:
                     if self.run_options.count() < 4:
-                        self.run_options.insertItem(2, "")
+                        self.run_options.insertItem(1, "")
                     self.run_options.setItemText(2, "Run " + str(run_count) + " times")
                     self.run_options.setCurrentIndex(2)
                 self.run_count = run_count
+
             else:
                 if self.run_count == -1:  # If cancel is hit and they were on infinite
-                    self.run_options.setCurrentIndex(1) # Getting the index of infinite would be better as it can change
+                    if self.run_options.count() == 4:
+                        self.run_options.setCurrentIndex(2)
+                    else:
+                        self.run_options.setCurrentIndex(1)
+                elif self.run_count != 1:
+                    self.run_options.setCurrentIndex(1)
                 else:
                     self.run_options.setCurrentIndex(0)
+            self.run_options.blockSignals(False)
 
     def hotkey_clicked(self):
         popup = HotkeyPopup()
+        print("into loop - hotkey popup")
         if popup.exec_() == QDialog.Accepted:
+            print("dialogue accepted - hotkey popup")
             self.hotkey_useful = popup.key_combination
             self.hotkey_pretty = ", ".join(self.hotkey_useful)
             self.run_button.setToolTip("Press " + str(self.hotkey_pretty) + " to kill the script")
@@ -243,7 +254,7 @@ class MacroManagerMain(QMainWindow):
         file_name, _ = QFileDialog.getSaveFileName(self, "Save Actions", "",
                                                    "All Files (*);;Pickle Files (*.pkl)", options=options)
         if file_name:
-            print(f"Saving to {file_name}")
+            print("Saving to " + file_name)
             with open(file_name, 'wb') as f:
                 pickle.dump([self.actions, self.present_images, self.absent_images], f)
 
@@ -253,7 +264,7 @@ class MacroManagerMain(QMainWindow):
                                                    "All Files (*);;Pickle Files (*.pkl)", options=options)
         try:
             if file_name:
-                print(f"Loading from {file_name}")
+                print("Loading from " + file_name)
                 with open(file_name, 'rb') as f:
                     functions = pickle.load(f)
                 self.actions.extend(functions[0])
@@ -261,7 +272,7 @@ class MacroManagerMain(QMainWindow):
                 self.absent_images.extend(functions[2])
                 self.update_action_list()
                 self.update_condition_list()
-        except _pickle.UnpicklingError:  # If you click on a non pickle file
+        except _pickle.UnpicklingError:  # If you click on a non-pickle file
             pass
 
     def switch_to_add_action_view(self):

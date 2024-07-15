@@ -1,5 +1,5 @@
 from ImageDetect import compare_main, get_image_not_np
-from Listener import wait_for_shift_press
+from Listener import wait_for_key_press
 from PIL import Image as PILImage
 import numpy as np
 from PyQt5 import QtWidgets, QtCore, QtGui
@@ -15,11 +15,11 @@ class Image:
         if top_left is None or bottom_right is None:
             print("Setting the coordinates for the image.")
             print("Move your mouse to the top left of the image. Press shift when ready. ", end="")
-            wait_for_shift_press()
+            wait_for_key_press()
             top_left = list(Controller().position)
 
             print("\nMove your mouse to the bottom right of the image. Press shift when ready. ", end="")
-            wait_for_shift_press()
+            wait_for_key_press()
             bottom_right = list(Controller().position)
 
         check_sizes(top_left, bottom_right)
@@ -27,7 +27,7 @@ class Image:
 
         if image is None:
             print("\nPress shift when you are ready to capture image. ", end="")
-            wait_for_shift_press()
+            wait_for_key_press()
             print()
             self.image = get_image_not_np(self.coordinates)
             self.image_pil = PILImage.fromarray(np.array(self.image))  # Store the PIL image for PyQt display

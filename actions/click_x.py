@@ -1,5 +1,5 @@
 from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtWidgets import QVBoxLayout, QLabel, QComboBox, QPushButton
+from PyQt5.QtWidgets import QVBoxLayout, QLabel, QComboBox, QPushButton, QLineEdit
 from pynput.mouse import Button, Controller
 from actions.action import Action
 from MouseShortcuts import click_pos, check_valid_input
@@ -50,6 +50,9 @@ class ClickXUI(QtWidgets.QWidget):
 
         self.coordinates_display = QLabel("Coordinates: Not set")
         self.layout.addWidget(self.coordinates_display)
+
+        self.index = QLineEdit()
+        self.layout.addWidget(self.index)
 
         self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(self.save_action)

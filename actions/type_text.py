@@ -56,7 +56,7 @@ class TypeText(Action):
                 phrase = ''
 
     def clean_input(self):
-        directions = [getattr(Key, "up"), getattr(Key, "right"), getattr(Key, "down"), getattr(Key, "left")]
+        directions = [Key.up, Key.right, Key.down, Key.left]
         temp_series = [] + self.series
         self.series.clear()
 
@@ -64,9 +64,9 @@ class TypeText(Action):
             if len(temp_series[i]) > 1:
                 try:  # Crashes if you try to do a getattr with something like altt so need a try except
                     temp_key = getattr(Key, (temp_series[i]))
-                    if temp_key not in directions:
-                        self.series.insert(0, getattr(Key, (temp_series[i])))
-                    else:
+                    if temp_key not in directions:  # The commands are inserted as if you were to type v+ctrl, nothing
+                        self.series.insert(0, getattr(Key, (temp_series[i])))  # happens. They have to be first
+                    else:     # for them to work. Right then shift also would not do anything, so they're not included
                         self.series.append(temp_key)
                 except AttributeError:
                     self.series += list(temp_series[i])
@@ -88,10 +88,11 @@ class TypeTextUI(QtWidgets.QWidget):
 
         self.instruction_label = QLabel("Input the phrase below. Use + to indicate a command "
                                         "(e.g. ctrl+v or tab+)<br><br>"
-                            "Use \\+ if you want to input +<br><br>"
-                            "You can see all valid commands "
-                            "<a href='https://pynput.readthedocs.io/en/latest/_modules/pynput"  # The docs are ugly but
-                                        "/keyboard/_base.html#Key'>here</a>")  # there are way many commands to explain
+                                        "Write \\+ if you want to input +<br><br>"
+                                        "You can see all valid commands "
+                                        "<a href='https://pynput.readthedocs.io/en/latest/_modules/pynput"
+                                        "/keyboard/_base.html#Key'>here</a>")
+
         self.instruction_label.setOpenExternalLinks(True)
         self.layout.addWidget(self.instruction_label)
 

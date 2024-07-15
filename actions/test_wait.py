@@ -1,5 +1,5 @@
 from unittest import TestCase
-import wait
+from actions import wait
 
 
 class TestWait(TestCase):

@@ -1,7 +1,5 @@
 from unittest import TestCase
 from actions import swipe_xy
-# from pynput.mouse import Controller  # - again, need to figure out how to test run()
-
 
 
 class TestSwipeXY(TestCase):

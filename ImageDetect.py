@@ -1,5 +1,4 @@
-from PIL import Image
-from PIL import ImageGrab
+from PIL import Image, ImageGrab
 import numpy as np
 
 

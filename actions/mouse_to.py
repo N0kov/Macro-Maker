@@ -4,7 +4,6 @@ from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import QVBoxLayout, QLabel, QPushButton
 from pynput.mouse import Controller
 from actions.action import Action
-from MouseShortcuts import check_valid_input
 
 
 class MouseTo(Action):

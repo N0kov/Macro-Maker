@@ -1,9 +1,7 @@
-# actions/click_x.py
-
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import QVBoxLayout, QLabel, QComboBox, QPushButton
 from pynput.mouse import Button, Controller
-from .action import Action
+from actions.action import Action
 from MouseShortcuts import click_pos, check_valid_input
 
 

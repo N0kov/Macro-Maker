@@ -102,9 +102,10 @@ class HotkeyPopup(QDialog):
                 key_name = special_keys[key]
             else:
                 try:
-                    if self.key_combination[0] == "shift":
-                        key_name = chr(key)  # Only one key is allowed so need to remove the shift
-                        self.key_combination.remove("shift")
+                    if len(self.key_combination) > 0:
+                        if self.key_combination[0] == "shift":
+                            key_name = chr(key)  # Only one key is allowed so need to remove the shift
+                            self.key_combination.remove("shift")
                     else:
                         key_name = chr(key).lower()  # It seems to default to caps so need lower()
                 except ValueError:  # If you hit a modifier key that isn't defined above

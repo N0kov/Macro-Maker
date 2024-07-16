@@ -1,5 +1,4 @@
-from MouseShortcuts import mouse_to, get_mouse_position, check_valid_input
-from Listener import wait_for_key_press
+from MouseShortcuts import check_valid_input
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import QVBoxLayout, QLabel, QPushButton
 from pynput.mouse import Controller
@@ -7,16 +6,11 @@ from actions.action import Action
 
 
 class MouseTo(Action):
-    def __init__(self, coordinates=None):
-        if coordinates is None:
-            print("Move your mouse to the desired position. Press shift when ready. ", end="")
-            wait_for_key_press()
-            self.coordinates = (get_mouse_position()[0], get_mouse_position()[1])
-        else:
-            self.coordinates = check_valid_input(coordinates)
+    def __init__(self, coordinates):
+        self.coordinates = check_valid_input(coordinates)
 
     def run(self):
-        mouse_to(self.coordinates)
+        Controller().position = (self.coordinates[0], self.coordinates[1])
 
     def __str__(self):
         return "Mouse to (" + str(self.coordinates[0]) + ", " + str(self.coordinates[1]) + ")"

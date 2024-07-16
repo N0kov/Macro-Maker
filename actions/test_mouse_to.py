@@ -6,19 +6,19 @@ class TestMouseTo(TestCase):
     pass
 
     def test_coordinate_passing_valid_data(self):
-        coords = (30, 50)
-        self.assertEqual(coords, mouse_to.MouseTo(coords).coordinates)
-        self.assertEqual(coords, mouse_to.MouseTo(("30", "50")).coordinates)  # Passing a string is fine
-        self.assertEqual(coords, mouse_to.MouseTo((30.2, 50.8)).coordinates)  # Decimals are floored
+        coordinates = [30, 50]
+        self.assertEqual(coordinates, mouse_to.MouseTo(coordinates).coordinates)
+        self.assertEqual(coordinates, mouse_to.MouseTo(("30", "50")).coordinates)  # Passing a string is fine
+        self.assertEqual(coordinates, mouse_to.MouseTo((30.2, 50.8)).coordinates)  # Decimals are floored
 
 
     def test_coordinates_passing_too_much_data(self):
-        coords = (80, 70)
-        self.assertEqual(coords, mouse_to.MouseTo((80, 70, 3)).coordinates)
-        self.assertEqual(coords, mouse_to.MouseTo((80, 70, "9000")).coordinates)
+        coordinates = [80, 70]
+        self.assertEqual(coordinates, mouse_to.MouseTo((80, 70, 3)).coordinates)
+        self.assertEqual(coordinates, mouse_to.MouseTo((80, 70, "9000")).coordinates)
 
     def test_coordinate_passing_too_little(self):
-        top_left = (0, 0)
+        top_left = [0, 0]
 
         self.assertEqual(top_left, mouse_to.MouseTo(50).coordinates)
 

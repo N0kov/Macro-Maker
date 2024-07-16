@@ -8,10 +8,7 @@ keyboard = Controller()
 
 
 class TypeText(Action):
-    def __init__(self, phrase=None):
-        if phrase is None:
-            phrase = input("Enter the phrase you would like to type. Add \'+\' between keys for a function \n"
-                           "Use '\\+' if you want to input a plus")
+    def __init__(self, phrase):
         self.series = []
         plus_exists = False
         if phrase.count("+") != phrase.count("\\"):
@@ -25,7 +22,6 @@ class TypeText(Action):
 
         else:
             self.series = list(phrase)
-            print(self.series)
 
     def run(self):
         def multi_input(i):

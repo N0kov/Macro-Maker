@@ -5,23 +5,23 @@ from pynput.mouse import Button
 
 class TestClickX(TestCase):
     def test_coordinate_passing_valid_data(self):
-        coords = (30, 50)
-        self.assertEqual(coords, click_x.ClickX(coords).coordinates)
+        coordinates = [30, 50]
+        self.assertEqual(coordinates, click_x.ClickX(coordinates, "left").coordinates)
 
     def test_coordinates_passing_too_much_data(self):
-        coords = (80, 70)
-        self.assertEqual(coords, click_x.ClickX((80, 70, 3)).coordinates)
-        self.assertEqual(coords, click_x.ClickX((80, 70, "3")).coordinates)
+        coordinates = [80, 70]
+        self.assertEqual(coordinates, click_x.ClickX((80, 70, 3), "right").coordinates)
+        self.assertEqual(coordinates, click_x.ClickX((80, 70, "3"), "middle").coordinates)
 
     def test_coordinate_passing_invalid_data(self):
-        top_left = (0, 0)
-        self.assertEqual(top_left, click_x.ClickX(50).coordinates)
+        top_left = [0, 0]
+        self.assertEqual(top_left, click_x.ClickX(50, "bad").coordinates)
 
-        three_eight = (300, 8000)
-        self.assertEqual(three_eight, click_x.ClickX(("300", "8000")).coordinates)  # It takes strings fine
+        three_eight = [300, 8000]
+        self.assertEqual(three_eight, click_x.ClickX(("300", "8000"), "a").coordinates)  # It takes strings fine
 
     def test_click_type_valid(self):
-        default_click = click_x.ClickX((50, 30))
+        default_click = click_x.ClickX((50, 30), "not a click")
         self.assertEqual(Button.left, default_click.click_type)
 
         left_test_l = click_x.ClickX((51, 31), "l")

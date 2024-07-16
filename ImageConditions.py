@@ -1,6 +1,4 @@
-from ImageDetect import compare_main, get_image_not_np
-from Listener import wait_for_key_press
-from PIL import Image as PILImage
+from ImageDetect import compare_images, threshold_calculation, get_image as capture_image
 import numpy as np
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtWidgets import *
@@ -11,28 +9,11 @@ from PyQt5.QtCore import Qt
 
 class Image:
 
-    def __init__(self, top_left=None, bottom_right=None, image=None):
-        if top_left is None or bottom_right is None:
-            print("Setting the coordinates for the image.")
-            print("Move your mouse to the top left of the image. Press shift when ready. ", end="")
-            wait_for_key_press()
-            top_left = list(Controller().position)
-
-            print("\nMove your mouse to the bottom right of the image. Press shift when ready. ", end="")
-            wait_for_key_press()
-            bottom_right = list(Controller().position)
-
+    def __init__(self, top_left, bottom_right, image):
         check_sizes(top_left, bottom_right)
         self.coordinates = [[top_left[0], top_left[1]], [bottom_right[0], bottom_right[1]]]
 
-        if image is None:
-            print("\nPress shift when you are ready to capture image. ", end="")
-            wait_for_key_press()
-            print()
-            self.image = get_image_not_np(self.coordinates)
-            self.image_pil = PILImage.fromarray(np.array(self.image))  # Store the PIL image for PyQt display
-        else:
-            self.image = image
+        self.image = image
 
         image_qt = QtGui.QImage(self.image.tobytes(), self.image.width, self.image.height,
                                 self.image.width * 3, QtGui.QImage.Format_RGB888)
@@ -40,8 +21,10 @@ class Image:
         self.image = np.array(self.image)
         self.pixmap = QPixmap.fromImage(image_qt)
 
+        self.threshold = threshold_calculation(self.image)
+
     def run(self):
-        return compare_main(self.image, self.coordinates)
+        return compare_images(self.image, self.coordinates, self.threshold)
 
     def get_image(self):
         return self.pixmap
@@ -118,8 +101,8 @@ class ImageConfigView(QtWidgets.QWidget):
             if event.type() == QtCore.QEvent.KeyPress and event.key() == QtCore.Qt.Key_Alt:
                 check_sizes(self.top_left, self.bottom_right)
 
-                self.image = get_image_not_np([[self.top_left[0], self.top_left[1]],
-                                               [self.bottom_right[0], self.bottom_right[1]]])
+                self.image = capture_image([[self.top_left[0], self.top_left[1]],
+                                               [self.bottom_right[0], self.bottom_right[1]]], "not numpy")
 
                 # To QPixmap
                 image_qt = QtGui.QImage(self.image.tobytes(), self.image.width, self.image.height,
@@ -137,13 +120,11 @@ class ImageConfigView(QtWidgets.QWidget):
         return super(ImageConfigView, self).eventFilter(obj, event)
 
     def save_action(self):
-        # Save configured action
         top_left = self.top_left
         bottom_right = self.bottom_right
         image = self.image
         present_or_not = self.present_absent_combo.currentText().lower()[0]
         if np.all(top_left and bottom_right and image):
-            print("OK")
             check_sizes(top_left, bottom_right)
             condition = Image(top_left, bottom_right, image)
             self.main_app.add_condition(condition, present_or_not)

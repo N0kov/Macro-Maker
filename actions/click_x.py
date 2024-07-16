@@ -2,17 +2,14 @@ from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import QVBoxLayout, QLabel, QComboBox, QPushButton, QLineEdit
 from pynput.mouse import Button, Controller
 from actions.action import Action
-from MouseShortcuts import click_pos, check_valid_input
+from MouseShortcuts import check_valid_input
 
 
 class ClickX(Action):
-    def __init__(self, coordinates=None, click_type=None):
-        if coordinates is None:
-            self.coordinates = (0, 0)
-        else:
-            self.coordinates = check_valid_input(coordinates)
+    def __init__(self, coordinates, click_type):
+        self.coordinates = check_valid_input(coordinates)
 
-        self.click = "Left"
+        self.click = "Left"  # The default for if the click isn't passed in correctly
         self.click_type = Button.left
         if click_type in ("r", "right"):
             self.click_type = Button.right
@@ -22,10 +19,11 @@ class ClickX(Action):
             self.click = "Middle"
 
     def run(self):
-        click_pos(self.coordinates, self.click_type)
+        Controller().position = (self.coordinates[0], self.coordinates[1])
+        Controller().click(self.click_type, 1)
 
     def __str__(self):
-        return self.click + " click at " + str(self.coordinates)
+        return self.click + " click at (" + str(self.coordinates[0]) + ", " + str(self.coordinates[1]) + ")"
 
 
 class ClickXUI(QtWidgets.QWidget):

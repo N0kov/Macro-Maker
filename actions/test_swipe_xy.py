@@ -5,14 +5,14 @@ from actions import swipe_xy
 class TestSwipeXY(TestCase):
 
     def test_coordinate_passing_valid_data(self):
-        start_coordinates = (30, 500)
-        end_coordinates = (300, 200)
+        start_coordinates = [30, 500]
+        end_coordinates = [300, 200]
         self.assertEqual(start_coordinates, swipe_xy.SwipeXY(start_coordinates, start_coordinates).start)
         self.assertEqual(end_coordinates, swipe_xy.SwipeXY(start_coordinates, end_coordinates).end)
 
     def test_coordinates_passing_too_much_data(self):
-        start_coordinates = (80, 70)
-        end_coordinates = (2000, 1000)
+        start_coordinates = [80, 70]
+        end_coordinates = [2000, 1000]
 
         self.assertEqual(start_coordinates, swipe_xy.SwipeXY((80, 70, 8000), (30, 900)).start)
         self.assertEqual(start_coordinates, swipe_xy.SwipeXY((80, 70, "3"), (70, 100, 3000)).start)
@@ -21,7 +21,7 @@ class TestSwipeXY(TestCase):
         self.assertEqual(end_coordinates, swipe_xy.SwipeXY((3000, "30", 8), (2000, 1000, "cool number here")).end)
 
     def test_coordinate_passing_invalid_data(self):
-        zero_zero = (0, 0)
+        zero_zero = [0, 0]
 
         self.assertEqual(zero_zero, swipe_xy.SwipeXY(("x", "y"), (300, 100)).start)
         self.assertEqual(zero_zero, swipe_xy.SwipeXY(("x", "y"), ("x2, y2")).start)
@@ -30,7 +30,7 @@ class TestSwipeXY(TestCase):
         self.assertEqual(zero_zero, swipe_xy.SwipeXY(("x", "z"), ("x2, y2")).end)
 
     def test_coordinate_passing_partially_incorrect_data(self):
-        good_coord = (900, 500)
+        good_coord = [900, 500]
 
         self.assertEqual(good_coord, swipe_xy.SwipeXY((900, 500), "no").start)
 

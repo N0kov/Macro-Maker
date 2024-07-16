@@ -12,6 +12,8 @@ from hotkey_popup import HotkeyPopup
 import threading
 
 
+# The main application for Macro-Maker. This manages the main GUI, holds the action and condition classes, allows
+# scripts to run and call on the other classes
 class MacroManagerMain(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -138,8 +140,8 @@ class MacroManagerMain(QMainWindow):
         # Checks if all the present images are present and absent ones are absent
         def check_images():
             while self.running_macro:
-                if not any(not image.run() for image in self.present_images) or any(
-                        image.run() for image in self.absent_images):
+                if all(image.run() for image in self.present_images) and all(
+                        not image.run() for image in self.absent_images):
                     return
 
         # Runs the actions. All used actions will have a run() function
@@ -244,16 +246,18 @@ class MacroManagerMain(QMainWindow):
             self.run_options.blockSignals(False)
 
     # Logic for if the change start / stop button is clicked. Opens hotkey_popup and allows the user to set a new
-    # hotkey. The button is updated after with the new hotkey
+    # hotkey. The button is updated after with the new hotkey. If the user gives no input or an invalid input,
+    # the hotkey will be set to none
     def hotkey_clicked(self):
         popup = HotkeyPopup()
         if popup.exec_() == QDialog.Accepted:
-            self.hotkey = popup.key_combination
             try:
+                self.hotkey = popup.key_combination
                 self.activation_key_button.setText("Set a hotkey (currently " + str(self.hotkey[0]) + ")")
-                change_hotkey(self.hotkey)
-            except IndexError:
-                pass
+            except (IndexError, AttributeError):
+                self.hotkey = []
+                self.activation_key_button.setText("Set a hotkey (none set)")
+            change_hotkey(self.hotkey)
 
     # Overwrites the startDrag def from PyQt5 to record the original row of the item that's being dragged and the item
     # itself. Then calls the standard startDrag to drag the item. This is used for the actions list

@@ -25,6 +25,7 @@ class TypeText(Action):
 
         else:
             self.series = list(phrase)
+            print(self.series)
 
     def run(self):
         def multi_input(i):
@@ -66,7 +67,7 @@ class TypeText(Action):
                     temp_key = getattr(Key, (temp_series[i]))
                     if temp_key not in directions:  # The commands are inserted as if you were to type v+ctrl, nothing
                         self.series.insert(0, getattr(Key, (temp_series[i])))  # happens. They have to be first
-                    else:     # for them to work. Right then shift also would not do anything, so they're not included
+                    else:  # for them to work
                         self.series.append(temp_key)
                 except AttributeError:
                     self.series += list(temp_series[i])
@@ -88,7 +89,7 @@ class TypeTextUI(QtWidgets.QWidget):
 
         self.instruction_label = QLabel("Input the phrase below. Use + to indicate a command "
                                         "(e.g. ctrl+v or tab+)<br><br>"
-                                        "Write \\+ if you want to input +<br><br>"
+                                        "Use \\+ if you want to input +<br><br>"
                                         "You can see all valid commands "
                                         "<a href='https://pynput.readthedocs.io/en/latest/_modules/pynput"
                                         "/keyboard/_base.html#Key'>here</a>")
@@ -115,4 +116,4 @@ class TypeTextUI(QtWidgets.QWidget):
         phrase = self.text_input.text()
         action = TypeText(phrase)
         self.main_app.add_action(action)
-        self.main_app.switch_to_main_view()  # Switch back to the main view
+        self.main_app.switch_to_main_view()

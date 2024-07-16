@@ -1,4 +1,4 @@
-from pynput.keyboard import Key, Listener
+from pynput.keyboard import Key, Listener, KeyCode
 
 
 running = False
@@ -14,7 +14,7 @@ def change_hotkey(new_hotkey):
         if len(key) > 1:
             hotkey.append(getattr(Key, key))
         else:
-            hotkey.append(key)
+            hotkey.append(KeyCode.from_char(key))
 
 
 def on_press(key):

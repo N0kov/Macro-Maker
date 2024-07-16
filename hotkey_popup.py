@@ -102,7 +102,11 @@ class HotkeyPopup(QDialog):
                 key_name = special_keys[key]
             else:
                 try:
-                    key_name = chr(key)
+                    if self.key_combination[0] == "shift":
+                        key_name = chr(key)  # Only one key is allowed so need to remove the shift
+                        self.key_combination.remove("shift")
+                    else:
+                        key_name = chr(key).lower()  # It seems to default to caps so need lower()
                 except ValueError:  # If you hit a modifier key that isn't defined above
                     self.label.setText("Invalid key")
 
@@ -111,8 +115,8 @@ class HotkeyPopup(QDialog):
                     self.key_combination.append(key_name)
                     self.label.setText("Capturing: " + ', '.join(self.key_combination))
 
-            if len(self.key_combination) >= 1:  # I'm currently not sure how to work the listener to adapt to multiple
-                self.recording = False       # keys at once, so key count is being capped at one for the time being
+            if len(self.key_combination) >= 1 and self.key_combination[0] != "shift":
+                self.recording = False
                 self.stop_recording()
 
     def keyReleaseEvent(self, event):

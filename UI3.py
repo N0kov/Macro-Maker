@@ -24,6 +24,10 @@ class MacroManagerMain(QMainWindow):
         self.start_global_listener()  # Thread stuff - checking for the hotkey to run your script
         self.run_action_condition = threading.Condition()   # Notification for the thread that runs the macro
         self.start_action_thread()  # Thread that runs the macro
+        self.running_actions = False  # Bool for if the macro is running or not
+        self.run_count = 1  # The amount of times the script will run, associated with run_options
+
+        self.hotkey = "f8"  # The default hotkey to start / stop the macro
 
         self.setWindowTitle("Macro Manager")
         self.setGeometry(400, 200, 1100, 700)
@@ -31,21 +35,18 @@ class MacroManagerMain(QMainWindow):
         self.central_widget = QStackedWidget()
         self.setCentralWidget(self.central_widget)
 
+        self.main_view = QWidget()
+        self.main_layout = QVBoxLayout(self.main_view)
+
+        self.init_top_ui()
+        self.init_action_condition_ui()
         self.init_ui()
         self.update_condition_list()
 
-    def init_ui(self):
-        self.main_view = QWidget()
-        main_layout = QVBoxLayout(self.main_view)
-
-        self.hotkey_pretty = "f8"  # Extra needed parameters. pretty is the one that's displayed to the user
-        self.hotkey_useful = [Key.f8]   # The functional version of the hotkey. Not nice to look at though
-        self.running_actions = False    # Bool for if the macro is running or not
-
-        # Top buttons
+    def init_top_ui(self):
         top_layout = QHBoxLayout()
         self.run_button = QPushButton("Run")
-        self.run_button.setToolTip("Press " + str(self.hotkey_pretty) + " to kill the script")
+        self.run_button.setToolTip("Press " + str(self.hotkey) + " to kill the script")
         self.run_button.clicked.connect(self.notify_action_thread)
 
         self.run_options = QComboBox()
@@ -53,8 +54,6 @@ class MacroManagerMain(QMainWindow):
         self.run_options.addItem("Run infinitely")
         self.run_options.addItem("Run x times")
         self.run_options.currentIndexChanged.connect(self.run_options_clicked)
-
-        self.run_count = 1  # The amount of times the script will run, associated with run_options
 
         self.activation_key_button = QPushButton("Click to change the start / stop hotkey")
         self.activation_key_button.clicked.connect(self.hotkey_clicked)
@@ -68,9 +67,9 @@ class MacroManagerMain(QMainWindow):
         top_layout.addWidget(self.activation_key_button)
         top_layout.addWidget(self.save_button)
         top_layout.addWidget(self.load_button)
-        main_layout.addLayout(top_layout)
+        self.main_layout.addLayout(top_layout)
 
-        # Middle buttons
+    def init_ui(self):
         middle_layout = QHBoxLayout()
 
         actions_frame = QFrame()  # Actions start here
@@ -125,7 +124,7 @@ class MacroManagerMain(QMainWindow):
 
         middle_layout.addWidget(conditions_frame)
 
-        main_layout.addLayout(middle_layout)
+        self.main_layout.addLayout(middle_layout)
         self.central_widget.addWidget(self.main_view)
         self.central_widget.setCurrentWidget(self.main_view)
 
@@ -228,13 +227,10 @@ class MacroManagerMain(QMainWindow):
 
     def hotkey_clicked(self):
         popup = HotkeyPopup()
-        print("into loop - hotkey popup")
         if popup.exec_() == QDialog.Accepted:
-            print("dialogue accepted - hotkey popup")
-            self.hotkey_useful = popup.key_combination
-            self.hotkey_pretty = ", ".join(self.hotkey_useful)
-            self.run_button.setToolTip("Or press " + str(self.hotkey_pretty) + " to start / stop the script")
-            change_hotkey(self.hotkey_useful)
+            self.hotkey = popup.key_combination
+            self.run_button.setToolTip("Or press " + ", ".join(self.hotkey) + " to start / stop the script")
+            change_hotkey(self.hotkey)
 
     def start_drag(self, supported_actions):
         self.action_list.start_pos = self.action_list.currentRow()

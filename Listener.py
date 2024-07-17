@@ -1,10 +1,11 @@
 from pynput.keyboard import Key, Listener, KeyCode
 
 
-running = False
-listener = None
-callback = None
-hotkey = [Key.f8]
+# Base parameters
+running = False  # Is it running?
+listener = None  # Is the listener active?
+callback = None  # Callback function
+hotkey = [Key.f8]  # The key that's being listened for
 
 
 # Changes the hotkey that the listener is listening for. This must be a string that is valid to be processed by pynput.

@@ -1,8 +1,11 @@
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLineEdit, QLabel, QDialogButtonBox
 
 
-# The popup so the user can set a custom rnn count for the macro. Their input must be an integer greater than zero
 class RunCountPopup(QDialog):
+    """
+    The popup so the user can set a custom run count for the macro. Their input must be an integer greater than zero
+    """
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Run count")
@@ -25,9 +28,11 @@ class RunCountPopup(QDialog):
 
         self.runs = None
 
-    # When the user presses "ok", this checks tha they've entered a valid value (an integer greater than zero)
-    # If so, it returns to main. Otherwise, it notifies the user and stays up
     def check_run_input_validity(self):
+        """
+        When the user presses "ok", this checks tha they've entered a valid value (an integer greater than zero)
+        If so, it returns to main. Otherwise, it notifies the user and stays up
+        """
         self.runs = self.run_input.text()
         if self.runs is not None:
             try:

@@ -1,5 +1,5 @@
 from unittest import TestCase
-from actions import type_text
+from actions import TypeText
 from pynput.keyboard import Key
 
 

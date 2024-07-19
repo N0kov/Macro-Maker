@@ -4,6 +4,8 @@ from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QVBoxLayout, QLabel, QPushButton, QLineEdit, QComboBox
 
 
+# The Wait action. When called, it causes the thread to sleep for an amount of time specified on the creation of the
+# object. This implements the Action class
 class Wait(Action):
     def __init__(self, wait_time=None):
         if not check_number_validity(wait_time):
@@ -67,6 +69,5 @@ class WaitUI(QtWidgets.QWidget):
                 self.main_app.add_action(wait)
             else:
                 self.main_app.add_wait_between_all(wait)
-            self.main_app.switch_to_main_view()  # Switch back to the main view
         else:
             QtWidgets.QMessageBox.warning(self, "Invalid Input", "Wait time must be a positive number.")

@@ -1,5 +1,5 @@
 from unittest import TestCase
-from actions import swipe_xy
+from actions import SwipeXY
 
 
 class TestSwipeXY(TestCase):

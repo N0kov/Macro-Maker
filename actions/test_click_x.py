@@ -1,5 +1,5 @@
 from unittest import TestCase
-from actions import click_x
+from actions import ClickX
 from pynput.mouse import Button
 
 

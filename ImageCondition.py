@@ -1,4 +1,4 @@
-from ImageDetect import compare_images, threshold_calculation, get_image as capture_image
+from image_similarity_detector import compare_images, threshold_calculation, get_image as capture_image
 import numpy as np
 from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtWidgets import *

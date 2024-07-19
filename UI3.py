@@ -3,12 +3,12 @@ import pickle
 import _pickle
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtWidgets import *
-from Listener import *
+from listener import *
 from ImageCondition import ImageConfigView
 from actions import ClickXUI, WaitUI, MouseToUI, TypeTextUI, SwipeXyUi, Wait
 from PyQt5.QtCore import Qt, QPoint
-from run_count_popup import RunCountPopup
-from hotkey_popup import HotkeyPopup
+from RunCountPopup import RunCountPopup
+from HotkeyPopup import HotkeyPopup
 import threading
 
 

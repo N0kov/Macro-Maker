@@ -1,5 +1,5 @@
 from unittest import TestCase
-from actions import mouse_to
+from actions import MouseTo
 
 
 class TestMouseTo(TestCase):

@@ -3,7 +3,17 @@ from time import sleep
 
 mouse = Controller()
 
-
+# Windows has DPI scaling issues, so if on Windows these global flags need to be set. if os.name == 'nt'
+# should check for Windows and only be True there, but as windll doesn't exist anywhere else, the
+# except AttributeError is there for safety. See https://pypi.org/project/pynput/
+import os
+try:
+    if os.name == 'nt':
+        import ctypes
+        PROCESS_PER_MONITOR_DPI_AWARE = 2
+        ctypes.windll.shcore.SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE)
+except AttributeError:
+    pass
 
 def move_between(pos1, pos2):
     """

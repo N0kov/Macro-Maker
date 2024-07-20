@@ -44,4 +44,3 @@ class RunCountPopup(QDialog):
 
             self.run_label.setText("Enter the amount of times the script should run."
                                    "\n\nThis must be a positive integer")
-

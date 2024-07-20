@@ -115,10 +115,12 @@ class ImageConfigView(QtWidgets.QWidget):
         """
         Processes when shift and control are hit (for top left and bottom right) and saves the mouse positions.
         When both are valid, hitting alt takes a screenshot of the selected area and displays it in the UI
-        Returns True if the user pressed shift, control or successfully takes a screenshot. Returns false otherwise
+        Returns True if the user pressed shift, control or successfully takes a screenshot. Returns to the default
+        eventFilter handling otherwise
         :param source: The source of the event - not used, only present as it is a set field
         :param event: The thing that happened to the UI
-        :return: True if the user pressed shift, control or successfully takes a screenshot. Returns false otherwise
+        :return: True if the user pressed shift, control or successfully takes a screenshot. Reverts to the standard
+            eventFilter handling otherwise
         """
         if (event.type() == QtCore.QEvent.KeyPress and event.key() == QtCore.Qt.Key_Shift):
             self.top_left_temp = list(Controller().position)
@@ -148,7 +150,7 @@ class ImageConfigView(QtWidgets.QWidget):
                 self.captured_image_display.setPixmap(scaled_pixmap)
                 return True
 
-        return False
+        return super(ImageConfigView, self).eventFilter(source, event)
 
     def save_action(self):
         """

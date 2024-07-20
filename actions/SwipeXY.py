@@ -4,6 +4,17 @@ from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import QVBoxLayout, QLabel, QPushButton
 from pynput.mouse import Controller
 
+# Windows has DPI scaling issues, so if on Windows these global flags need to be set. if os.name == 'nt'
+# should check for Windows and only be True there, but as windll doesn't exist anywhere else, the
+# except AttributeError is there for safety. See https://pypi.org/project/pynput/
+import os
+try:
+    if os.name == 'nt':
+        import ctypes
+        PROCESS_PER_MONITOR_DPI_AWARE = 2
+        ctypes.windll.shcore.SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE)
+except AttributeError:
+    pass
 
 class SwipeXY(Action):
     def __init__(self, start, end):
@@ -14,17 +25,28 @@ class SwipeXY(Action):
         move_between(self.start, self.end)
 
     def __str__(self):
+        """
+        Returns a string representation of SwipeXY in the form "Swipe between (x1, y1) and (x2, y2)"
+        """
         return ("Swipe between (" + str(self.start[0]) + ", " + str(self.start[1]) + ") and (" + str(self.end[0]) +
             ", " + str(self.end[1]) + ")")
 
 
 class SwipeXyUi(QtWidgets.QWidget):  # Using Ui not UI, as XYUI is unclear
     def __init__(self, main_app, parent=None):
+        """
+        Establishes the main application frame, and calls init_ui to do the rest
+        :param main_app: The application that this is being called from
+        :param parent: The parent widget. Defaults to None
+        """
         super(SwipeXyUi, self).__init__(parent)
         self.main_app = main_app
         self.init_ui()
 
     def init_ui(self):
+        """
+        Initializes the UI elements and installs a custom event filter to listen for keystrokes
+        """
         self.layout = QVBoxLayout(self)
         self.label = QLabel("Make a new swipe action")
         self.layout.addWidget(self.label)
@@ -53,7 +75,13 @@ class SwipeXyUi(QtWidgets.QWidget):  # Using Ui not UI, as XYUI is unclear
         self.final_coordinates = None
         self.installEventFilter(self)
 
-    def eventFilter(self, obj, event):
+    def eventFilter(self, source, event):
+        """
+        :param source: The source of the event - not used, only present as it is a set field
+        :param event: The thing that happened to the UI
+        :return: True if one of the custom events has been fulfilled. Otherwise, defaults to the default eventFilter
+            PyQt5 logic
+        """
         if event.type() == QtCore.QEvent.KeyPress and event.key() == QtCore.Qt.Key_Shift:
             self.initial_coordinates = Controller().position
             self.initial_coordinates_display.setText("Coordinates: " + str(self.initial_coordinates))
@@ -62,7 +90,7 @@ class SwipeXyUi(QtWidgets.QWidget):  # Using Ui not UI, as XYUI is unclear
             self.final_coordinates = Controller().position
             self.final_coordinates_display.setText("Coordinates: " + str(self.final_coordinates))
             return True
-        return super(SwipeXyUi, self).eventFilter(obj, event)
+        return super(SwipeXyUi, self).eventFilter(source, event)
 
     def save_action(self):
         initial_coordinates = self.initial_coordinates

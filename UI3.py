@@ -31,7 +31,7 @@ class MacroManagerMain(QMainWindow):
         self.running_macro = False  # Bool for if the macro is running or not
         self.run_count = 1  # The amount of times the script will run, associated with run_options
 
-        self.hotkey = "f8"  # The default hotkey to start / stop the macro
+        self.hotkey = ["f8"]  # The default hotkey to start / stop the macro
 
         self.setWindowTitle("Macro Manager")
         self.setGeometry(400, 200, 1100, 700)
@@ -61,7 +61,7 @@ class MacroManagerMain(QMainWindow):
         self.run_options.addItem("Run x times")
         self.run_options.currentIndexChanged.connect(self.run_options_clicked)
 
-        self.activation_key_button = QPushButton("Set a hotkey (currently " + self.hotkey + ")")
+        self.activation_key_button = QPushButton("Set a hotkey (currently " + str(self.hotkey[0]) + ")")
         self.activation_key_button.clicked.connect(self.hotkey_clicked)
 
         save_button = QPushButton("Save")
@@ -142,7 +142,8 @@ class MacroManagerMain(QMainWindow):
         The main script to run the macro. It checks for if all the image conditions are present / absent, then runs
         the actions. Triggered from the run button or pressing the hotkey. Killed on pressing the hotkey as well
         Runs on action_thread, all internal definitions will also quit on hotkey press
-        :return:
+        run_count being set to -1 means that it will run infinitely. Otherwise, the macro will run equal to the
+        amount of times listed
         """
         if not self.actions:  # So processing power isn't wasted running a script that will trigger nothing
             return
@@ -157,7 +158,6 @@ class MacroManagerMain(QMainWindow):
                         not image.run() for image in self.absent_images):
                     return
 
-        # Runs the actions. All used actions will have a run() function
         def actions_run():
             """
             Runs the actions. All used actions will have a run() function
@@ -168,7 +168,6 @@ class MacroManagerMain(QMainWindow):
                     return
                 action.run()
 
-        # The default loop to be used to check for images and then run the actions
         def run_loop():
             """
             The default loop to be used to check for images and then run the actions
@@ -238,7 +237,7 @@ class MacroManagerMain(QMainWindow):
         with self.run_action_condition:
             self.run_action_condition.notify()
 
-    def run_options_clicked(self, option):
+    def run_options_clicked(self, option):  # RUN INFINITE TIMES IS BEING OVERWRITTEN WITH AN EMPTY STRING, FIX THIS
         """
         Processes when the run count dropdown is clicked. If run once or infinite is clicked, sets run_count to 1 or -1
         When Run x times is clicked, opens run_count_popup, sets run_count to the number selected and creates a new

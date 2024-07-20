@@ -4,22 +4,41 @@ from PyQt5 import QtWidgets
 from PyQt5.QtWidgets import QVBoxLayout, QLabel, QPushButton, QLineEdit, QComboBox
 
 
-# The Wait action. When called, it causes the thread to sleep for an amount of time specified on the creation of the
-# object. This implements the Action class
 class Wait(Action):
-    def __init__(self, wait_time=None):
+    """
+    # The Wait action. When called, it causes the thread to sleep for an amount of time specified
+    at the creation of the object. This implements the Action class
+    """
+
+    def __init__(self, wait_time):
+        """
+        Creates a variable and sets it equal to the passed in wait_time. If this isn't a float greater than or
+        equal to zero, the var is instead set to zero
+        :param wait_time:
+        """
         if not check_number_validity(wait_time):
             wait_time = 0
         self.wait_time = wait_time
 
     def __str__(self):
+        """
+        Returns a string representation of the Wait object in the form "Waiting for [x] seconds"
+        """
         return "Waiting for " + str(self.wait_time) + " seconds"
 
     def run(self):
+        """
+        Makes the thread sleep for as long as wait_time specifies
+        """
         sleep(self.wait_time)
 
 
 def check_number_validity(wait_time):
+    """
+    Checks that the passed in value is a float greater than or equal to zero. Returns True if so, False otherwise
+    :param wait_time: The String / float to be checked
+    :return: True if the number is greater than or equal to zero, False otherwise
+    """
     try:
         wait_time = float(wait_time)
         if wait_time >= 0:
@@ -30,12 +49,20 @@ def check_number_validity(wait_time):
 
 class WaitUI(QtWidgets.QWidget):
     def __init__(self, main_app, parent=None):
+        """
+        Establishes the main application frame, and calls init_ui to do the rest
+        :param main_app: The application that this is being called from
+        :param parent: The parent widget. Defaults to None
+        """
         super(WaitUI, self).__init__(parent)
         self.main_app = main_app
         self.init_ui()
 
     def init_ui(self):
-        self.layout = QVBoxLayout(self)  # Main layout for the configuration view
+        """
+        Initializes the UI elements
+        """
+        self.layout = QVBoxLayout(self)
 
         self.label = QLabel("Create a new wait action")
         self.layout.addWidget(self.label)
@@ -62,6 +89,15 @@ class WaitUI(QtWidgets.QWidget):
         self.wait_time = None
 
     def save_action(self):
+        """
+        Checks to see that the user has inputted a time in text_input which is a float that's greater than
+        or equal to zero. If this fails a popup opens telling the user to input a positive number, and
+        a Wait object is created with the wait time and returned to UI3
+        If between_all is set to only add a wait here, one wait is added to the end of UI3's action list. Otherwise,
+        a wait is added between all non-Wait actions
+        :return: an instance of Wait to UI3 with specifications for if it should be added between all non-Wait
+        actions or just added at the end
+        """
         wait_time_str = self.text_input.text()
         if check_number_validity(wait_time_str):
             wait = Wait(float(wait_time_str))
@@ -69,5 +105,6 @@ class WaitUI(QtWidgets.QWidget):
                 self.main_app.add_action(wait)
             else:
                 self.main_app.add_wait_between_all(wait)
+            self.main_app.switch_to_main_view()
         else:
             QtWidgets.QMessageBox.warning(self, "Invalid Input", "Wait time must be a positive number.")

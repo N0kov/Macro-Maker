@@ -9,8 +9,8 @@ class HotkeyPopup(QDialog):
     """
     def __init__(self, hotkey, parent=None):
         """
-        Initializes the popup, and creates the buttons and labels
-        :param hotkey: The current hotkey that's being used to be displayed in hotkey_display
+        Initializes the popup, and creates the buttons and labels. Sets the initial hotkey to be the passed in hotkey
+        :param hotkey: The current hotkey that's being used to be displayed in hotkey_display. Must be a list
         :param parent: The parent widget. Defaults to None
         """
         super().__init__(parent)
@@ -32,7 +32,9 @@ class HotkeyPopup(QDialog):
         self.start_button.clicked.connect(self.start_recording)
         self.horizontal_layout.addWidget(self.start_button)
 
-        self.hotkey_display = QLabel(str(hotkey))
+        self.key_combination = hotkey
+
+        self.hotkey_display = QLabel(str(self.key_combination[0]))
         self.hotkey_display.setFixedHeight(50)
         self.hotkey_display.setAlignment(Qt.AlignCenter)
         self.horizontal_layout.addWidget(self.hotkey_display)
@@ -68,7 +70,7 @@ class HotkeyPopup(QDialog):
         self.start_button.setEnabled(True)
         self.label.setText("Press start to start recording the new hotkey")
         if self.key_combination:
-            self.hotkey_display.setText(str(self.key_combination))
+            self.hotkey_display.setText(str(self.key_combination[-1]))
         else:
             self.hotkey_display.setText("No hotkey")
         self.releaseKeyboard()

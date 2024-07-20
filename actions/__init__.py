@@ -5,4 +5,5 @@ from .TypeText import TypeText, TypeTextUI
 from .Wait import Wait, WaitUI
 
 
-__all__ = ["ClickX", "SwipeXY", "MouseTo", "TypeText", "Wait"]
+__all__ = ["ClickX", "SwipeXY", "MouseTo", "TypeText", "Wait",
+           "ClickXUI", "WaitUI", "MouseToUI", "TypeTextUI", "SwipeXyUi"]

@@ -92,15 +92,16 @@ class MouseToUI(QtWidgets.QWidget):
             PyQt5 logic
         """
         if event.type() == QtCore.QEvent.KeyPress and event.key() == QtCore.Qt.Key_Shift:
-            self.set_coordinates()
+            self.coordinates = Controller().position
+            self.coordinates_display.setText("Coordinates: " + str(self.coordinates))
             return True
         return super(MouseToUI, self).eventFilter(source, event)
 
-    def set_coordinates(self):
-        self.coordinates = Controller().position
-        self.coordinates_display.setText("Coordinates: " + str(self.coordinates))
-
     def save_action(self):
+        """
+        If coordinates exist, this creates a MouseTo object using self.coordinates, and returns it
+         to UI3's action list. If coordinates is None, nothing happens
+        """
         coordinates = self.coordinates
         if coordinates:
             action = MouseTo(coordinates)

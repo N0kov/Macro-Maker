@@ -58,7 +58,7 @@ class MacroManagerMain(QMainWindow):
         self.run_options = QComboBox()
         self.run_options.addItem("Run once")
         self.run_options.addItem("Run infinitely")
-        self.run_options.addItem("Run x times")
+        self.run_options.addItem("Custom run count")
         self.run_options.currentIndexChanged.connect(self.run_options_clicked)
 
         self.activation_key_button = QPushButton("Set a hotkey (currently " + str(self.hotkey[0]) + ")")
@@ -237,7 +237,7 @@ class MacroManagerMain(QMainWindow):
         with self.run_action_condition:
             self.run_action_condition.notify()
 
-    def run_options_clicked(self, option):  # RUN INFINITE TIMES IS BEING OVERWRITTEN WITH AN EMPTY STRING, FIX THIS
+    def run_options_clicked(self, option):
         """
         Processes when the run count dropdown is clicked. If run once or infinite is clicked, sets run_count to 1 or -1
         When Run x times is clicked, opens run_count_popup, sets run_count to the number selected and creates a new
@@ -250,7 +250,7 @@ class MacroManagerMain(QMainWindow):
         elif self.run_options.itemText(option) == "Run infinitely":
             self.run_count = -1
 
-        elif self.run_options.itemText(option) == "Run x times":
+        elif self.run_options.itemText(option) == "Custom run count":
             self.run_options.blockSignals(True)  # The item selected changes during this def, retriggering
             popup = RunCountPopup(self)  # run_options_clicked so the signal needs to be blocked
             if popup.exec_() == QDialog.Accepted:
@@ -261,8 +261,9 @@ class MacroManagerMain(QMainWindow):
                 elif run_count > 1:
                     if self.run_options.count() < 4:
                         self.run_options.insertItem(1, "")
-                    self.run_options.setItemText(2, "Run " + str(run_count) + " times")
-                    self.run_options.setCurrentIndex(2)
+                    self.run_options.setItemText(1, "Run " + str(run_count) + " times")
+                    self.run_options.setCurrentIndex(1)
+
                 self.run_count = run_count
 
             else:
@@ -327,7 +328,6 @@ class MacroManagerMain(QMainWindow):
         file_name, _ = QFileDialog.getSaveFileName(self, "Save Actions", "",
                                                    "All Files (*);;Pickle Files (*.pkl)", options=options)
         if file_name:
-            # print("Saving to " + file_name)
             with open(file_name, 'wb') as f:
                 pickle.dump([self.actions, self.present_images, self.absent_images], f)
 
@@ -342,7 +342,6 @@ class MacroManagerMain(QMainWindow):
                                                    "All Files (*);;Pickle Files (*.pkl)", options=options)
         try:
             if file_name:
-                # print("Loading from " + file_name)
                 with open(file_name, 'rb') as f:
                     functions = pickle.load(f)
                 self.actions.extend(functions[0])
@@ -498,29 +497,36 @@ class MacroManagerMain(QMainWindow):
     def right_click_actions_menu(self, position: QPoint):
         """
         The menu for right-clicking on an action or condition. It creates an interface next to the mouse
-        to with a delete box which when clicked on will delete the selected action or condition from the list
+        to with a delete box which when clicked on will delete the selected action or condition from the list, and
+        a copy box which when clicks copies the item and pastes it at the bottom. Copying only works for actions
         :param position: The x,y coordinates that the user's mouse was at when the right-clicked on the item
-        :return:
         """
         sender = self.sender()
         menu = QMenu()
-        remove_item = menu.addAction("Remove")  # There may be an edit action or edit condition option added
-                                                # in the future
+        remove_item = menu.addAction("Remove")
+        copy_item = None
+        if sender is not self.image_list:
+            copy_item = menu.addAction("Copy")
+
         if sender == self.action_list or sender == self.image_list:
 
             global_position = sender.viewport().mapToGlobal(position)  # Aligning the right click box
             selected_action = menu.exec_(global_position)
+            item = sender.itemAt(position)
+            if item is not None:
+                item = item.data(Qt.UserRole)
 
-            if selected_action == remove_item:
-                item = sender.itemAt(position)
-                if item is not None:
-                    item = item.data(Qt.UserRole)
+                if selected_action == remove_item:
                     if item in self.actions:
                         self.remove_action_or_condition(item, self.actions)
                     elif item in self.absent_images:
                         self.remove_action_or_condition(item, self.absent_images)
                     elif item in self.present_images:
                         self.remove_action_or_condition(item, self.present_images)
+
+                elif selected_action == copy_item:
+                    self.actions.append(item)
+                    self.update_action_list()
 
         sender.clearSelection()
 

@@ -16,6 +16,7 @@ try:
 except AttributeError:
     pass
 
+
 class ClickX(Action):
     """
     Implements Action. A class that holds pynput data of coordinates to be clicked and the type of click. Can be run to
@@ -58,20 +59,24 @@ class ClickXUI(QtWidgets.QWidget):
     UI for ClickX, allows the user to set a position they want to click at and what type of click they want graphically
     """
 
-    def __init__(self, main_app, parent=None):
+    def __init__(self, main_app, click_x_to_edit=None):
         """
         Establishes the main application frame, and calls init_ui to do the rest
         :param main_app: The application that this is being called from
-        :param parent: The parent widget. Defaults to None
+        :param click_x_to_edit: The passed in Wait action to be edited. Defaults to None
         """
-        super(ClickXUI, self).__init__(parent)
+        super(ClickXUI, self).__init__()
         self.main_app = main_app
-        self.coordinates = None
-        self.init_ui()
+        if click_x_to_edit is not None:
+            self.coordinates = click_x_to_edit.coordinates
+        else:
+            self.coordinates = None
+        self.init_ui(click_x_to_edit)
 
-    def init_ui(self):
+    def init_ui(self, click_x_to_edit=None):
         """
         Initializes the UI elements and installs a custom event filter to listen for keystrokes
+        :param click_x_to_edit: The passed in Wait action to be edited. Defaults to None
         """
         self.layout = QVBoxLayout(self)
         self.label = QLabel("Make a new click action")
@@ -91,6 +96,10 @@ class ClickXUI(QtWidgets.QWidget):
 
         self.index = QLineEdit()
         self.layout.addWidget(self.index)
+
+        if click_x_to_edit is not None:
+            self.click_type_combo.setCurrentIndex(self.click_type_combo.findText(click_x_to_edit.click))
+            self.coordinates_display.setText("Coordinates: " + str(self.coordinates))
 
         self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(self.save_action)

@@ -48,35 +48,40 @@ def check_number_validity(wait_time):
 
 
 class WaitUI(QtWidgets.QWidget):
-    def __init__(self, main_app, parent=None):
+    def __init__(self, main_app, wait_to_edit=None):
         """
         Establishes the main application frame, and calls init_ui to do the rest
         :param main_app: The application that this is being called from
-        :param parent: The parent widget. Defaults to None
+        :param wait_to_edit: The passed in Wait action to be edited. Defaults to None
         """
-        super(WaitUI, self).__init__(parent)
+        super(WaitUI, self).__init__()
         self.main_app = main_app
-        self.init_ui()
+        self.init_ui(wait_to_edit)
 
-    def init_ui(self):
+    def init_ui(self, wait_to_edit=None):
         """
         Initializes the UI elements
         """
         self.layout = QVBoxLayout(self)
 
-        self.label = QLabel("Create a new wait action")
-        self.layout.addWidget(self.label)
+        self.title = QLabel("Create a new wait action")
+        self.layout.addWidget(self.title)
 
-        self.label = QLabel("Input the wait time:")
-        self.layout.addWidget(self.label)
+        self.prompt = QLabel("Input the wait time:")
+        self.layout.addWidget(self.prompt)
 
         self.text_input = QLineEdit()
         self.layout.addWidget(self.text_input)
 
-        self.between_all = QComboBox()
-        self.between_all.addItem("Only add a wait here")
-        self.between_all.addItem("Add a wait between all non-wait actions")
-        self.layout.addWidget(self.between_all)
+        if wait_to_edit is not None:
+            self.wait_time = str(wait_to_edit.wait_time)
+            self.text_input.setText(self.wait_time)
+            self.title.setText("Edit wait action")
+        else:
+            self.between_all = QComboBox()
+            self.between_all.addItem("Only add a wait here")
+            self.between_all.addItem("Add a wait between all non-wait actions")
+            self.layout.addWidget(self.between_all)
 
         self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(self.save_action)
@@ -99,12 +104,14 @@ class WaitUI(QtWidgets.QWidget):
         actions or just added at the end
         """
         wait_time_str = self.text_input.text()
+        # if
         if check_number_validity(wait_time_str):
             wait = Wait(float(wait_time_str))
-            if self.between_all.currentText() == "Only add a wait here":
-                self.main_app.add_action(wait)
-            else:
+            if (hasattr(self, 'between_all')
+                    and self.between_all.currentText() == "Add a wait between all non-wait actions"):
                 self.main_app.add_wait_between_all(wait)
+            else:
+                self.main_app.add_action(wait)
             self.main_app.switch_to_main_view()
         else:
             QtWidgets.QMessageBox.warning(self, "Invalid Input", "Wait time must be a positive number.")

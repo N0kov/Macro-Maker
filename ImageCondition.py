@@ -50,21 +50,21 @@ def check_sizes(top_left, bottom_right):
             bottom_right[index] = temp
 
 
-class ImageConfigView(QtWidgets.QWidget):
+class ImageConditionUI(QtWidgets.QWidget):
     """
     The UI handler for the Image Class. Allows the user to select if the image should be present or absent, and then
     pick the coordinates of it and take the screenshot which is displayed to the user. It's then returned to UI3 in
     the form of an Image object
     """
 
-    def __init__(self, main_app, parent=None):
+    def __init__(self, main_app):
         self.top_left_temp = None  # The temp ones are needed throughout, so they're class vars. These are needed
         self.bottom_right_temp = None  # as after taking a screenshot the user should still be able to change the
         self.top_left_permanent = None  # coordinates, but to make ImageDetect the final ones must be the same as
         self.bottom_right_permanent = None  # those in the screenshot. permanent = temp on taking a screenshot
         self.image = None
 
-        super(ImageConfigView, self).__init__(parent)
+        super(ImageConditionUI, self).__init__()
         self.main_app = main_app
         self.init_ui()
 
@@ -128,15 +128,15 @@ class ImageConfigView(QtWidgets.QWidget):
             return True
         elif (event.type() == QtCore.QEvent.KeyPress and event.key() == QtCore.Qt.Key_Control):
             self.bottom_right_temp = list(Controller().position)
-            self.bottom_right_display.setText("Bottom right at: " + str(self.top_left_temp))
+            self.bottom_right_display.setText("Bottom right at: " + str(self.bottom_right_temp))
             return True
 
         if self.top_left_temp and self.bottom_right_temp:
             if event.type() == QtCore.QEvent.KeyPress and event.key() == QtCore.Qt.Key_Alt:
                 check_sizes(self.top_left_temp, self.bottom_right_temp)
 
-                self.top_left_permanent = self.top_left_temp
-                self.bottom_right_permanent = self.bottom_right_temp
+                self.top_left_permanent = self.top_left_temp.copy()
+                self.bottom_right_permanent = self.bottom_right_temp.copy()
 
                 self.image = capture_image([[self.top_left_permanent[0], self.top_left_permanent[1]],
                                             [self.bottom_right_permanent[0], self.bottom_right_permanent[1]]],
@@ -150,7 +150,7 @@ class ImageConfigView(QtWidgets.QWidget):
                 self.captured_image_display.setPixmap(scaled_pixmap)
                 return True
 
-        return super(ImageConfigView, self).eventFilter(source, event)
+        return super(ImageConditionUI, self).eventFilter(source, event)
 
     def save_action(self):
         """

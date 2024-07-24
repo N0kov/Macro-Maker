@@ -109,19 +109,20 @@ class TypeTextUI(QtWidgets.QWidget):
     into a TypeText object which can be run at later notice
     """
 
-    def __init__(self, main_app, parent=None):
+    def __init__(self, main_app, type_text_to_edit=None):
         """
         Establishes the main application frame, and calls init_ui to do the rest
         :param main_app: The application that this is being called from
-        :param parent: The parent widget. Defaults to None
+        :param type_text_to_edit: The passed in TypeText action to be edited. Defaults to None
         """
-        super(TypeTextUI, self).__init__(parent)
+        super(TypeTextUI, self).__init__()
         self.main_app = main_app
-        self.init_ui()
+        self.init_ui(type_text_to_edit)
 
-    def init_ui(self):
+    def init_ui(self, type_text_to_edit=None):
         """
         Initializes the UI elements
+        :param type_text_to_edit: The passed in SwipeXY action to be edited. Defaults to None
         """
         self.layout = QVBoxLayout(self)
 
@@ -142,6 +143,9 @@ class TypeTextUI(QtWidgets.QWidget):
 
         self.text_input = QLineEdit()
         self.layout.addWidget(self.text_input)
+
+        if type_text_to_edit is not None:
+            self.text_input.setText(''.join([str(item) for item in type_text_to_edit.series]))
 
         self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(lambda: self.save_action())

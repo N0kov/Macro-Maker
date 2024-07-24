@@ -4,9 +4,9 @@ import _pickle
 from PyQt5 import QtGui, QtCore
 from PyQt5.QtWidgets import *
 from listener import *
-from ImageCondition import ImageConfigView
-from actions import ClickXUI, WaitUI, MouseToUI, TypeTextUI, SwipeXyUi, Wait
-from PyQt5.QtCore import Qt, QPoint
+from ImageCondition import ImageConditionUI
+from actions import *
+from PyQt5.QtCore import Qt, QPoint, QEventLoop
 from RunCountPopup import RunCountPopup
 from HotkeyPopup import HotkeyPopup
 import threading
@@ -127,7 +127,7 @@ class MacroManagerMain(QMainWindow):
         conditions_layout.addWidget(condition_button, alignment=QtCore.Qt.AlignRight | QtCore.Qt.AlignBottom)
 
         self.image_label = QLabel()
-        self.image_label.setFixedSize(200, 200)
+        self.image_label.setFixedSize(500, 270)
         self.image_label.setAlignment(QtCore.Qt.AlignCenter)
         conditions_layout.addWidget(self.image_label)
 
@@ -413,11 +413,11 @@ class MacroManagerMain(QMainWindow):
 
     def add_wait_between_all(self, wait):
         """
-        A custom version of add_action for the Wait class. If the user asks to have a delay between all non-wait actions,
-        this does that. If it goes say type, wait, type, there will not be an additional wait added between the two types
-        It updates the UI for actions after to show the Waits
-        :param wait:
-        :return:
+        A custom version of add_action for the Wait class. which adds a Wait between all non-wait actions.
+        If it goes say type, wait, type, there will not be an additional wait added between the two types.
+        No wait is added at index zero
+        It updates the UI for actions after to show the added Waits
+        :param wait: The created wait action to be added
         """
         if self.actions:
             for i in range(len(self.actions) - 1, 0, -1):
@@ -432,15 +432,18 @@ class MacroManagerMain(QMainWindow):
         This switches the UI to the ImageCondition Class for the user to make a condition, before returning to the
         main UI
         """
-        self.image_config_view = ImageConfigView(self)
+        self.image_config_view = ImageConditionUI(self)
         self.central_widget.addWidget(self.image_config_view)
         self.central_widget.setCurrentWidget(self.image_config_view)
 
     def switch_to_main_view(self):
         """
-        Returns to the main UI from wherever it was previously
+        Returns to the main UI from wherever it was previously. If there's an event loop waiting for
+        the UI to finish, this also quits it
         """
         self.central_widget.setCurrentWidget(self.main_view)
+        if hasattr(self, 'event_loop') and self.event_loop.isRunning():
+            self.event_loop.quit()
 
     def add_condition(self, condition, present_or_not):
         """
@@ -482,31 +485,34 @@ class MacroManagerMain(QMainWindow):
             item.setData(QtCore.Qt.UserRole, condition)
             self.image_list.addItem(item)
 
-    def display_selected_image(self, image):
+    def display_selected_image(self, position):
         """
         For when the user clicks on one of the images in the condition list. It shows the image from the specified
         ImageCondition object in the bottom right of the UI
-        :param image: The condition in image_list that was selected by the user. This is an ImageCondition object,
-            being used to get the image from it
-        :return:
+        :param position: The position in image_list that was selected by the user. This specified the ImageCondition
+            object to be displayed
         """
-        condition = image.data(QtCore.Qt.UserRole)
+
+        condition = position.data(QtCore.Qt.UserRole)
         pixmap = condition.image_pixmap
-        self.image_label.setPixmap(pixmap.scaled(self.image_label.size(), QtCore.Qt.KeepAspectRatio))
+        scaled_pixmap = pixmap.scaled(self.image_label.size(), QtCore.Qt.KeepAspectRatio,
+                                      QtCore.Qt.SmoothTransformation)
+        self.image_label.setPixmap(scaled_pixmap)
 
     def right_click_actions_menu(self, position: QPoint):
         """
-        The menu for right-clicking on an action or condition. It creates an interface next to the mouse
-        to with a delete box which when clicked on will delete the selected action or condition from the list, and
-        a copy box which when clicks copies the item and pastes it at the bottom. Copying only works for actions
+        The menu for right-clicking on an action or condition. It creates a clickable dropdown menu, that allows the
+        user to copy an item, edit one or delete the item. Copying and editing only work for actions
         :param position: The x,y coordinates that the user's mouse was at when the right-clicked on the item
         """
         sender = self.sender()
         menu = QMenu()
-        remove_item = menu.addAction("Remove")
         copy_item = None
+        edit_item = None
         if sender is not self.image_list:
             copy_item = menu.addAction("Copy")
+            edit_item = menu.addAction("Edit")
+        remove_item = menu.addAction("Remove")
 
         if sender == self.action_list or sender == self.image_list:
 
@@ -528,7 +534,39 @@ class MacroManagerMain(QMainWindow):
                     self.actions.append(item)
                     self.update_action_list()
 
+                elif selected_action == edit_item:
+                    length_before_addition = len(self.actions)
+                    self.call_ui_with_params(item)
+                    if len(self.actions) > length_before_addition:
+                        item_index = self.actions.index(item)
+                        self.actions[item_index] = self.actions.pop()
+                        self.update_action_list()
+
         sender.clearSelection()
+
+    def call_ui_with_params(self, item):
+        """
+        Calls the UI for the specified item, with the current item's data passed in so the user can edit it
+        This waits until the UI is closed to allow the script to close
+        :param item: The action to be edited
+        """
+        if isinstance(item, ClickX):
+            edit_view = ClickXUI(self, item)
+        elif isinstance(item, MouseTo):
+            edit_view = MouseToUI(self, item)
+        elif isinstance(item, SwipeXY):
+            edit_view = SwipeXyUi(self, item)
+        elif isinstance(item, TypeText):
+            edit_view = TypeTextUI(self, item)
+        elif isinstance(item, Wait):
+            edit_view = WaitUI(self, item)
+        else:
+            return
+        self.central_widget.addWidget(edit_view)
+        self.central_widget.setCurrentWidget(edit_view)
+
+        self.event_loop = QEventLoop()
+        self.event_loop.exec_()
 
     def remove_action_or_condition(self, item, item_list):
         """

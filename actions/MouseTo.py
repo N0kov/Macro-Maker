@@ -16,6 +16,7 @@ try:
 except AttributeError:
     pass
 
+
 class MouseTo(Action):
     """
     Implements Action. An object that holds [x, y] coordinates. Can be run to move the mouse to said coordinates
@@ -47,19 +48,24 @@ class MouseToUI(QtWidgets.QWidget):
     save it as a MouseTo object.
     """
 
-    def __init__(self, main_app, parent=None):
+    def __init__(self, main_app, mouse_to_to_edit=None):
         """
         Establishes the main application frame, and calls init_ui to do the rest
         :param main_app: The application that this is being called from
-        :param parent: The parent widget. Defaults to None
+        :param mouse_to_to_edit: The passed in MouseTo action to be edited. Defaults to None
         """
-        super(MouseToUI, self).__init__(parent)
+        super(MouseToUI, self).__init__()
+        if mouse_to_to_edit is not None:
+            self.coordinates = mouse_to_to_edit.coordinates
+        else:
+            self.coordinates = None
         self.main_app = main_app
-        self.init_ui()
+        self.init_ui(mouse_to_to_edit)
 
-    def init_ui(self):
+    def init_ui(self, mouse_to_to_edit=None):
         """
         Initializes the UI elements and installs a custom event filter to listen for keystrokes
+        :param mouse_to_to_edit: The passed in MouseTo action to be edited. Defaults to None
         """
         self.layout = QVBoxLayout(self)
         self.label = QLabel("Make a mouse movement action")
@@ -71,6 +77,9 @@ class MouseToUI(QtWidgets.QWidget):
         self.coordinates_display = QLabel("Coordinates: Not set")
         self.layout.addWidget(self.coordinates_display)
 
+        if mouse_to_to_edit is not None:
+            self.coordinates_display.setText("Coordinates: " + str(self.coordinates))
+
         self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(self.save_action)
         self.layout.addWidget(self.save_button)
@@ -79,7 +88,6 @@ class MouseToUI(QtWidgets.QWidget):
         self.back_button.clicked.connect(self.main_app.switch_to_main_view)
         self.layout.addWidget(self.back_button)
 
-        self.coordinates = None
         self.installEventFilter(self)
 
     def eventFilter(self, source, event):

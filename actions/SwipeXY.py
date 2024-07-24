@@ -16,6 +16,7 @@ try:
 except AttributeError:
     pass
 
+
 class SwipeXY(Action):
     def __init__(self, start, end):
         self.start = check_valid_input(start)
@@ -29,23 +30,31 @@ class SwipeXY(Action):
         Returns a string representation of SwipeXY in the form "Swipe between (x1, y1) and (x2, y2)"
         """
         return ("Swipe between (" + str(self.start[0]) + ", " + str(self.start[1]) + ") and (" + str(self.end[0]) +
-            ", " + str(self.end[1]) + ")")
+                ", " + str(self.end[1]) + ")")
 
 
 class SwipeXyUi(QtWidgets.QWidget):  # Using Ui not UI, as XYUI is unclear
-    def __init__(self, main_app, parent=None):
+    def __init__(self, main_app, swipe_xy_to_edit=None):
         """
         Establishes the main application frame, and calls init_ui to do the rest
         :param main_app: The application that this is being called from
-        :param parent: The parent widget. Defaults to None
+        :param swipe_xy_to_edit: The passed in SwipeXY action to be edited. Defaults to None
         """
-        super(SwipeXyUi, self).__init__(parent)
-        self.main_app = main_app
-        self.init_ui()
+        super(SwipeXyUi, self).__init__()
 
-    def init_ui(self):
+        if swipe_xy_to_edit is not None:
+            self.initial_coordinates = swipe_xy_to_edit.start
+            self.final_coordinates = swipe_xy_to_edit.end
+        else:
+            self.initial_coordinates = None
+            self.final_coordinates = None
+        self.main_app = main_app
+        self.init_ui(swipe_xy_to_edit)
+
+    def init_ui(self, swipe_xy_to_edit=None):
         """
         Initializes the UI elements and installs a custom event filter to listen for keystrokes
+        :param swipe_xy_to_edit: The passed in SwipeXY action to be edited. Defaults to None
         """
         self.layout = QVBoxLayout(self)
         self.label = QLabel("Make a new swipe action")
@@ -63,6 +72,10 @@ class SwipeXyUi(QtWidgets.QWidget):  # Using Ui not UI, as XYUI is unclear
         self.final_coordinates_display = QLabel("Final coordinates: Not set")
         self.layout.addWidget(self.final_coordinates_display)
 
+        if swipe_xy_to_edit is not None:
+            self.initial_coordinates_display.setText("Coordinates: " + str(self.initial_coordinates))
+            self.final_coordinates_display.setText("Coordinates: " + str(self.final_coordinates))
+
         self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(self.save_action)
         self.layout.addWidget(self.save_button)
@@ -71,8 +84,6 @@ class SwipeXyUi(QtWidgets.QWidget):  # Using Ui not UI, as XYUI is unclear
         self.back_button.clicked.connect(self.main_app.switch_to_main_view)
         self.layout.addWidget(self.back_button)
 
-        self.initial_coordinates = None
-        self.final_coordinates = None
         self.installEventFilter(self)
 
     def eventFilter(self, source, event):

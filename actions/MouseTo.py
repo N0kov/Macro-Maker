@@ -1,6 +1,6 @@
 from mouse_shortcuts import check_valid_input
-from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtWidgets import QVBoxLayout, QLabel, QPushButton
+from PyQt6.QtWidgets import QVBoxLayout, QLabel, QPushButton
+from PyQt6 import QtCore, QtWidgets
 from pynput.mouse import Controller
 from actions.action import Action
 
@@ -99,7 +99,7 @@ class MouseToUI(QtWidgets.QWidget):
         :return: True if one of the custom events has been fulfilled. Otherwise, defaults to the default eventFilter
             PyQt5 logic
         """
-        if event.type() == QtCore.QEvent.KeyPress and event.key() == QtCore.Qt.Key_Shift:
+        if event.type() == QtCore.QEvent.Type.KeyPress and event.key() == QtCore.Qt.Key.Key_Shift:
             self.coordinates = Controller().position
             self.coordinates_display.setText("Coordinates: " + str(self.coordinates))
             return True

@@ -1,5 +1,5 @@
-from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtWidgets import QVBoxLayout, QLabel, QComboBox, QPushButton, QLineEdit
+from PyQt6 import QtCore, QtWidgets
+from PyQt6.QtWidgets import QVBoxLayout, QLabel, QComboBox, QPushButton
 from pynput.mouse import Button, Controller
 from actions.action import Action
 from mouse_shortcuts import check_valid_input
@@ -94,9 +94,6 @@ class ClickXUI(QtWidgets.QWidget):
         self.coordinates_display = QLabel("Coordinates: Not set")
         self.layout.addWidget(self.coordinates_display)
 
-        self.index = QLineEdit()
-        self.layout.addWidget(self.index)
-
         if click_x_to_edit is not None:
             self.click_type_combo.setCurrentIndex(self.click_type_combo.findText(click_x_to_edit.click))
             self.coordinates_display.setText("Coordinates: " + str(self.coordinates))
@@ -120,7 +117,7 @@ class ClickXUI(QtWidgets.QWidget):
         :return: True if one of the custom events has been fulfilled. Otherwise, defaults to the default eventFilter
             PyQt5 logic
         """
-        if event.type() == QtCore.QEvent.KeyPress and event.key() == QtCore.Qt.Key_Shift:
+        if event.type() == QtCore.QEvent.Type.KeyPress and event.key() == QtCore.Qt.Key.Key_Shift:
             self.set_coordinates()
             return True
         return super(ClickXUI, self).eventFilter(source, event)

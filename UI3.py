@@ -1,12 +1,12 @@
 import sys
 import pickle
 import _pickle
-from PyQt5 import QtGui, QtCore
-from PyQt5.QtWidgets import *
+from PyQt6 import QtGui, QtCore
+from PyQt6.QtWidgets import *
+from PyQt6.QtCore import Qt, QPoint, QEventLoop
 from listener import *
 from ImageCondition import ImageConditionUI
 from actions import *
-from PyQt5.QtCore import Qt, QPoint, QEventLoop
 from RunCountPopup import RunCountPopup
 from HotkeyPopup import HotkeyPopup
 import threading
@@ -26,7 +26,7 @@ class MacroManagerMain(QMainWindow):
         self.absent_images = []
 
         self.start_hotkey_listener()  # Thread stuff - checking for the hotkey to run your script
-        self.run_action_condition = threading.Condition()   # Notification for the thread that runs the macro
+        self.run_action_condition = threading.Condition()  # Notification for the thread that runs the macro
         self.start_action_thread()  # Thread that runs the macro
         self.running_macro = False  # Bool for if the macro is running or not
         self.run_count = 1  # The amount of times the script will run, associated with run_options
@@ -82,14 +82,14 @@ class MacroManagerMain(QMainWindow):
         middle_layout = QHBoxLayout()
 
         actions_frame = QFrame()  # Actions start here
-        actions_frame.setFrameShape(QFrame.StyledPanel)
+        actions_frame.setFrameShape(QFrame.Shape.StyledPanel)
         actions_layout = QVBoxLayout(actions_frame)
         actions_label = QLabel("Actions")
 
-        self.action_list = QListWidget()   # action_list has custom logic
-        self.action_list.setContextMenuPolicy(Qt.CustomContextMenu)  # Right click
+        self.action_list = QListWidget()  # action_list has custom logic
+        self.action_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)  # Right click
         self.action_list.customContextMenuRequested.connect(self.right_click_actions_menu)
-        self.action_list.setDragDropMode(QAbstractItemView.DragDrop)  # Dragging
+        self.action_list.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)  # Dragging
         self.action_list.start_pos = None
         self.action_list.startDrag = self.startDrag
         self.action_list.dropEvent = self.dropEvent
@@ -102,21 +102,23 @@ class MacroManagerMain(QMainWindow):
         add_action_button.setFont(QtGui.QFont("Arial", 20))
         add_action_button.setStyleSheet("border-radius: 20px; background-color: #007bff; color: white;")
         add_action_button.clicked.connect(self.switch_to_add_action_view)
-        actions_layout.addWidget(add_action_button, alignment=QtCore.Qt.AlignRight | QtCore.Qt.AlignBottom)
+        actions_layout.addWidget(add_action_button, alignment=QtCore.Qt.AlignmentFlag.AlignRight |
+                                                              QtCore.Qt.AlignmentFlag.AlignBottom)
 
         middle_layout.addWidget(actions_frame)
 
         conditions_frame = QFrame()  # Conditions start here
-        conditions_frame.setFrameShape(QFrame.StyledPanel)
+        conditions_frame.setFrameShape(QFrame.Shape.StyledPanel)
         conditions_layout = QVBoxLayout(conditions_frame)
         conditions_label = QLabel("Conditions")
         conditions_layout.addWidget(conditions_label)
 
-        self.image_list = QListWidget()
-        self.image_list.itemClicked.connect(self.display_selected_image)
-        self.image_list.setContextMenuPolicy(Qt.CustomContextMenu)  # Right click menu
-        self.image_list.customContextMenuRequested.connect(self.right_click_actions_menu)
-        conditions_layout.addWidget(self.image_list)
+        self.current_displayed_condition = None
+        self.condition_list = QListWidget()
+        self.condition_list.itemClicked.connect(self.display_selected_condition)
+        self.condition_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)  # Right click menu
+        self.condition_list.customContextMenuRequested.connect(self.right_click_actions_menu)
+        conditions_layout.addWidget(self.condition_list)
 
         condition_button = QPushButton("+")
         condition_button.setFixedSize(40, 40)
@@ -124,12 +126,13 @@ class MacroManagerMain(QMainWindow):
         condition_button.setStyleSheet("border-radius: 20px; background-color: #007bff; color: white;")
         condition_button.clicked.connect(self.switch_to_add_condition_view)
 
-        conditions_layout.addWidget(condition_button, alignment=QtCore.Qt.AlignRight | QtCore.Qt.AlignBottom)
+        conditions_layout.addWidget(condition_button, alignment=QtCore.Qt.AlignmentFlag.AlignRight |
+                                                                QtCore.Qt.AlignmentFlag.AlignBottom)
 
-        self.image_label = QLabel()
-        self.image_label.setFixedSize(500, 270)
-        self.image_label.setAlignment(QtCore.Qt.AlignCenter)
-        conditions_layout.addWidget(self.image_label)
+        self.condition_display = QLabel()
+        self.condition_display.setFixedSize(500, 270)
+        self.condition_display.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        conditions_layout.addWidget(self.condition_display)
 
         middle_layout.addWidget(conditions_frame)
 
@@ -253,7 +256,7 @@ class MacroManagerMain(QMainWindow):
         elif self.run_options.itemText(option) == "Custom run count":
             self.run_options.blockSignals(True)  # The item selected changes during this def, retriggering
             popup = RunCountPopup(self)  # run_options_clicked so the signal needs to be blocked
-            if popup.exec_() == QDialog.Accepted:
+            if popup.exec() == QDialog.DialogCode.Accepted:
                 run_count = popup.runs
                 if run_count == 1:  # If they say they want it to run once
                     self.run_options.setCurrentIndex(1)
@@ -285,7 +288,7 @@ class MacroManagerMain(QMainWindow):
         the hotkey will be set to none
         """
         popup = HotkeyPopup(self.hotkey)
-        if popup.exec_() == QDialog.Accepted:
+        if popup.exec() == QDialog.DialogCode.Accepted:
             try:
                 self.hotkey = popup.key_combination
                 self.activation_key_button.setText("Set a hotkey (currently " + str(self.hotkey[0]) + ")")
@@ -324,12 +327,20 @@ class MacroManagerMain(QMainWindow):
         """
         Saves the actions and conditions as a pickle file with a basic GUI file explorer dialogue
         """
-        options = QFileDialog.Options()
-        file_name, _ = QFileDialog.getSaveFileName(self, "Save Actions", "",
+
+        options = QFileDialog.Option(0)
+        file_name, _ = QFileDialog.getSaveFileName(self, "Save Macro", "",
                                                    "All Files (*);;Pickle Files (*.pkl)", options=options)
         if file_name:
             with open(file_name, 'wb') as f:
                 pickle.dump([self.actions, self.present_images, self.absent_images], f)
+
+        # options = QFileDialog.Options()
+        # file_name, _ = QFileDialog.getSaveFileName(self, "Save Macro", "",
+        #                                            "All Files (*);;Pickle Files (*.pkl)", options=options)
+        # if file_name:
+        #     with open(file_name, 'wb') as f:
+        #         pickle.dump([self.actions, self.present_images, self.absent_images], f)
 
     def load_actions(self):
         """
@@ -337,7 +348,7 @@ class MacroManagerMain(QMainWindow):
         not it will just pass. This extends the preexisting actions, present_images and absent_images lists, so
         any actions and / or conditions that are already be present will stay at the front
         """
-        options = QFileDialog.Options()
+        options = QFileDialog.Option(0)
         file_name, _ = QFileDialog.getOpenFileName(self, "Load Actions", "",
                                                    "All Files (*);;Pickle Files (*.pkl)", options=options)
         try:
@@ -395,7 +406,7 @@ class MacroManagerMain(QMainWindow):
             self.action_config_view = TypeTextUI(self)
         elif action_type == "swipe":
             self.action_config_view = SwipeXyUi(self)
-        else:     # In case something weird gets called that isn't one of the above
+        else:  # In case something weird gets called that isn't one of the above
             return
 
         self.central_widget.addWidget(self.action_config_view)
@@ -466,7 +477,7 @@ class MacroManagerMain(QMainWindow):
         self.action_list.clear()
         for action in self.actions:
             item = QListWidgetItem(str(action))
-            item.setData(QtCore.Qt.UserRole, action)
+            item.setData(QtCore.Qt.ItemDataRole.UserRole, action)
             self.action_list.addItem(item)
 
     def update_condition_list(self):
@@ -475,59 +486,69 @@ class MacroManagerMain(QMainWindow):
         as "Present Image" or "Absent Image"
         :return:
         """
-        self.image_list.clear()
+        self.condition_list.clear()
         for condition in self.present_images:
             item = QListWidgetItem("Present Image")
-            item.setData(QtCore.Qt.UserRole, condition)
-            self.image_list.addItem(item)
+            item.setData(QtCore.Qt.ItemDataRole.UserRole, condition)
+            self.condition_list.addItem(item)
         for condition in self.absent_images:
             item = QListWidgetItem("Absent Image")
-            item.setData(QtCore.Qt.UserRole, condition)
-            self.image_list.addItem(item)
+            item.setData(QtCore.Qt.ItemDataRole.UserRole, condition)
+            self.condition_list.addItem(item)
 
-    def display_selected_image(self, position):
+    def display_selected_condition(self, position):
         """
         For when the user clicks on one of the images in the condition list. It shows the image from the specified
         ImageCondition object in the bottom right of the UI
-        :param position: The position in image_list that was selected by the user. This specified the ImageCondition
+        :param position: The position in condition_list that was selected by the user. This specified the ImageCondition
             object to be displayed
         """
 
-        condition = position.data(QtCore.Qt.UserRole)
+        condition = position.data(QtCore.Qt.ItemDataRole.UserRole)
         pixmap = condition.image_pixmap
-        scaled_pixmap = pixmap.scaled(self.image_label.size(), QtCore.Qt.KeepAspectRatio,
-                                      QtCore.Qt.SmoothTransformation)
-        self.image_label.setPixmap(scaled_pixmap)
+        scaled_pixmap = pixmap.scaled(self.condition_display.size(), Qt.AspectRatioMode.KeepAspectRatio,
+                                      Qt.TransformationMode.SmoothTransformation)
+        self.condition_display.setPixmap(scaled_pixmap)
+
+        if condition in self.present_images:
+            self.current_displayed_condition = self.present_images.index(condition)
+        elif condition in self.absent_images:
+            self.current_displayed_condition = self.absent_images.index(condition)
 
     def right_click_actions_menu(self, position: QPoint):
         """
         The menu for right-clicking on an action or condition. It creates a clickable dropdown menu, that allows the
-        user to copy an item, edit one or delete the item. Copying and editing only work for actions
+        user to copy an item, edit one or delete the item. Copying and editing only work for actions. If the condition
+        that's being displayed is deleted, it stops being displayed
         :param position: The x,y coordinates that the user's mouse was at when the right-clicked on the item
         """
         sender = self.sender()
         menu = QMenu()
         copy_item = None
         edit_item = None
-        if sender is not self.image_list:
+        if sender is not self.condition_list:
             copy_item = menu.addAction("Copy")
             edit_item = menu.addAction("Edit")
         remove_item = menu.addAction("Remove")
 
-        if sender == self.action_list or sender == self.image_list:
+        if sender == self.action_list or sender == self.condition_list:
 
             global_position = sender.viewport().mapToGlobal(position)  # Aligning the right click box
-            selected_action = menu.exec_(global_position)
+            selected_action = menu.exec(global_position)
             item = sender.itemAt(position)
             if item is not None:
-                item = item.data(Qt.UserRole)
+                item = item.data(Qt.ItemDataRole.UserRole)
 
                 if selected_action == remove_item:
                     if item in self.actions:
                         self.remove_action_or_condition(item, self.actions)
                     elif item in self.absent_images:
+                        if self.current_displayed_condition == self.absent_images.index(item):
+                            self.condition_display.clear()
                         self.remove_action_or_condition(item, self.absent_images)
                     elif item in self.present_images:
+                        if self.current_displayed_condition == self.present_images.index(item):
+                            self.condition_display.clear()
                         self.remove_action_or_condition(item, self.present_images)
 
                 elif selected_action == copy_item:
@@ -566,7 +587,7 @@ class MacroManagerMain(QMainWindow):
         self.central_widget.setCurrentWidget(edit_view)
 
         self.event_loop = QEventLoop()
-        self.event_loop.exec_()
+        self.event_loop.exec()
 
     def remove_action_or_condition(self, item, item_list):
         """
@@ -587,7 +608,7 @@ def main():
     app = QApplication(sys.argv)
     main_window = MacroManagerMain()
     main_window.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
 
 if __name__ == "__main__":

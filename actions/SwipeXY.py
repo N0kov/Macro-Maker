@@ -1,7 +1,7 @@
 from actions.action import Action
 from mouse_shortcuts import move_between, check_valid_input
-from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtWidgets import QVBoxLayout, QLabel, QPushButton
+from PyQt6.QtWidgets import QVBoxLayout, QLabel, QPushButton
+from PyQt6 import QtCore, QtWidgets
 from pynput.mouse import Controller
 
 # Windows has DPI scaling issues, so if on Windows these global flags need to be set. if os.name == 'nt'
@@ -93,11 +93,11 @@ class SwipeXyUi(QtWidgets.QWidget):  # Using Ui not UI, as XYUI is unclear
         :return: True if one of the custom events has been fulfilled. Otherwise, defaults to the default eventFilter
             PyQt5 logic
         """
-        if event.type() == QtCore.QEvent.KeyPress and event.key() == QtCore.Qt.Key_Shift:
+        if event.type() == QtCore.QEvent.Type.KeyPress and event.key() == QtCore.Qt.Key.Key_Shift:
             self.initial_coordinates = Controller().position
             self.initial_coordinates_display.setText("Coordinates: " + str(self.initial_coordinates))
             return True
-        elif event.type() == QtCore.QEvent.KeyPress and event.key() == QtCore.Qt.Key_Control:
+        elif event.type() == QtCore.QEvent.Type.KeyPress and event.key() == QtCore.Qt.Key.Key_Control:
             self.final_coordinates = Controller().position
             self.final_coordinates_display.setText("Coordinates: " + str(self.final_coordinates))
             return True

@@ -1,7 +1,7 @@
 from actions.action import Action
 from time import sleep
-from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QVBoxLayout, QLabel, QPushButton, QLineEdit, QComboBox
+from PyQt6 import QtWidgets
+from PyQt6.QtWidgets import QVBoxLayout, QLabel, QComboBox, QPushButton, QLineEdit
 
 
 class Wait(Action):

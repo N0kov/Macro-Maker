@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLineEdit, QLabel, QDialogButtonBox
+from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLineEdit, QLabel, QDialogButtonBox
 
 
 class RunCountPopup(QDialog):
@@ -19,7 +19,8 @@ class RunCountPopup(QDialog):
         self.run_input = QLineEdit()
         self.layout.addWidget(self.run_input)
 
-        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self)
+        self.button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok
+                                           | QDialogButtonBox.StandardButton.Cancel, self)
         self.button_box.accepted.connect(self.check_run_input_validity)
         self.button_box.rejected.connect(self.reject)
         self.layout.addWidget(self.button_box)

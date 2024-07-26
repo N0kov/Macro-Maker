@@ -1,7 +1,7 @@
 from pynput.keyboard import Key, Controller
 from actions.action import Action
-from PyQt5 import QtWidgets
-from PyQt5.QtWidgets import QVBoxLayout, QLabel, QPushButton, QLineEdit
+from PyQt6.QtWidgets import QVBoxLayout, QLabel, QPushButton, QLineEdit
+from PyQt6 import QtWidgets
 import re
 
 keyboard = Controller()

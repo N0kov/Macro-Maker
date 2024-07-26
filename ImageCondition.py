@@ -1,10 +1,10 @@
 from image_similarity_detector import compare_images, threshold_calculation, get_image as capture_image
 import numpy as np
-from PyQt5 import QtWidgets, QtCore, QtGui
-from PyQt5.QtWidgets import *
 from pynput.mouse import Controller
-from PyQt5.QtGui import QPixmap
-from PyQt5.QtCore import Qt
+from PyQt6 import QtWidgets, QtCore, QtGui
+from PyQt6.QtGui import QPixmap, QImage
+from PyQt6.QtCore import Qt, QEvent
+from PyQt6.QtWidgets import QVBoxLayout, QLabel, QComboBox, QPushButton
 
 
 class ImageCondition:
@@ -20,7 +20,7 @@ class ImageCondition:
         self.image = image
 
         image_qt = QtGui.QImage(self.image.tobytes(), self.image.width, self.image.height,
-                                self.image.width * 3, QtGui.QImage.Format_RGB888)
+                                self.image.width * 3, QImage.Format.Format_RGB888)
 
         self.image = np.array(self.image)
         self.image_pixmap = QPixmap.fromImage(image_qt)
@@ -122,17 +122,17 @@ class ImageConditionUI(QtWidgets.QWidget):
         :return: True if the user pressed shift, control or successfully takes a screenshot. Reverts to the standard
             eventFilter handling otherwise
         """
-        if (event.type() == QtCore.QEvent.KeyPress and event.key() == QtCore.Qt.Key_Shift):
+        if event.type() == QEvent.Type.KeyPress and event.key() == QtCore.Qt.Key.Key_Shift:
             self.top_left_temp = list(Controller().position)
             self.top_left_display.setText("Top left at: " + str(self.top_left_temp))
             return True
-        elif (event.type() == QtCore.QEvent.KeyPress and event.key() == QtCore.Qt.Key_Control):
+        elif event.type() == QEvent.Type.KeyPress and event.key() == QtCore.Qt.Key.Key_Control:
             self.bottom_right_temp = list(Controller().position)
             self.bottom_right_display.setText("Bottom right at: " + str(self.bottom_right_temp))
             return True
 
         if self.top_left_temp and self.bottom_right_temp:
-            if event.type() == QtCore.QEvent.KeyPress and event.key() == QtCore.Qt.Key_Alt:
+            if event.type() == QEvent.Type.KeyPress and event.key() == QtCore.Qt.Key.Key_Alt:
                 check_sizes(self.top_left_temp, self.bottom_right_temp)
 
                 self.top_left_permanent = self.top_left_temp.copy()
@@ -143,10 +143,11 @@ class ImageConditionUI(QtWidgets.QWidget):
                                            "not numpy array")
 
                 image_qt = QtGui.QImage(self.image.tobytes(), self.image.width, self.image.height,
-                                        self.image.width * 3, QtGui.QImage.Format_RGB888)
+                                        self.image.width * 3, QtGui.QImage.Format.Format_RGB888)
 
                 pixmap = QPixmap.fromImage(image_qt)
-                scaled_pixmap = pixmap.scaled(600, 400, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                scaled_pixmap = pixmap.scaled(600, 400, Qt.AspectRatioMode.KeepAspectRatio,
+                                              Qt.TransformationMode.SmoothTransformation)
                 self.captured_image_display.setPixmap(scaled_pixmap)
                 return True
 

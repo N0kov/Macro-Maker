@@ -1,10 +1,12 @@
-from image_similarity_detector import compare_images, threshold_calculation, get_image as capture_image
+from conditions.image_similarity_detector import compare_images, threshold_calculation, get_image as capture_image
 import numpy as np
 from pynput.mouse import Controller
 from PyQt6 import QtWidgets, QtCore, QtGui
 from PyQt6.QtGui import QPixmap, QImage
-from PyQt6.QtCore import Qt, QEvent
+from PyQt6.QtCore import Qt, QEvent, QByteArray, QBuffer, QIODevice
 from PyQt6.QtWidgets import QVBoxLayout, QLabel, QComboBox, QPushButton
+import pickle
+# from io import BytesIO
 
 
 class ImageCondition:
@@ -18,6 +20,8 @@ class ImageCondition:
         self.coordinates = [[top_left[0], top_left[1]], [bottom_right[0], bottom_right[1]]]
 
         self.image = image
+
+        QtGui.QImage()
 
         image_qt = QtGui.QImage(self.image.tobytes(), self.image.width, self.image.height,
                                 self.image.width * 3, QImage.Format.Format_RGB888)
@@ -34,6 +38,21 @@ class ImageCondition:
         :return: True if what's on screen is very similar to the reference image, False otherwise
         """
         return compare_images(self.image, self.coordinates, self.threshold)
+
+    def clear_pixmap(self):
+        """
+        Converts image_pixmap to None. Useful for pickling, as QPixmaps cannot be pickled
+        """
+        self.image_pixmap = None
+
+    def recover_pixmap(self):
+        """
+        Sets image_pixmap to a QPixmap from a numpy array of an image (self.image)
+        """
+        height, width, channels = self.image.shape
+        bytes_per_line = channels * width
+        q_image = QImage(self.image.tobytes(), width, height, bytes_per_line, QImage.Format.Format_RGB888)
+        self.image_pixmap = QPixmap.fromImage(q_image)
 
 
 def check_sizes(top_left, bottom_right):
@@ -58,6 +77,9 @@ class ImageConditionUI(QtWidgets.QWidget):
     """
 
     def __init__(self, main_app):
+        """
+        Base initialization
+        """
         self.top_left_temp = None  # The temp ones are needed throughout, so they're class vars. These are needed
         self.bottom_right_temp = None  # as after taking a screenshot the user should still be able to change the
         self.top_left_permanent = None  # coordinates, but to make ImageDetect the final ones must be the same as

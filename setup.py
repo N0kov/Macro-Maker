@@ -8,12 +8,7 @@ setup(
     author='N0kov',
     author_email='nokovk@proton.me',
     url='https://github.com/N0kov/Macro-Maker',
-    install_requires=[
-        'PyQt6',
-        'numpy',
-        'pillow',
-        'pynput',
-    ],
+    install_requires=['PyQt6', 'numpy', 'pillow', 'pynput', 'inflect'],
     classifiers=[
         'Programming Language :: Python :: 3',
         'License :: OSI Approved :: MIT License',

@@ -2,7 +2,7 @@ from PyQt6 import QtCore, QtWidgets
 from PyQt6.QtWidgets import QVBoxLayout, QLabel, QComboBox, QPushButton
 from pynput.mouse import Button, Controller
 from actions.action import Action
-from mouse_shortcuts import check_valid_input
+from actions.mouse_shortcuts import check_valid_input
 
 # Windows has DPI scaling issues, so if on Windows these global flags need to be set. if os.name == 'nt'
 # should check for Windows and only be True there, but as windll doesn't exist anywhere else, the

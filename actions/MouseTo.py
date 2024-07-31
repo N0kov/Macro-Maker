@@ -1,4 +1,4 @@
-from mouse_shortcuts import check_valid_input
+from actions.mouse_shortcuts import check_valid_input
 from PyQt6.QtWidgets import QVBoxLayout, QLabel, QPushButton
 from PyQt6 import QtCore, QtWidgets
 from pynput.mouse import Controller

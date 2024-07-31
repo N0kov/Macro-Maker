@@ -1,5 +1,5 @@
 from actions.action import Action
-from mouse_shortcuts import move_between, check_valid_input
+from actions.mouse_shortcuts import move_between, check_valid_input
 from PyQt6.QtWidgets import QVBoxLayout, QLabel, QPushButton
 from PyQt6 import QtCore, QtWidgets
 from pynput.mouse import Controller

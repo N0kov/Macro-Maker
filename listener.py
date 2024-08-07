@@ -1,39 +1,35 @@
 from pynput.keyboard import Key, Listener, KeyCode
-from queue import Queue
 
 
 # Base parameters
 listener = None  # Is the listener active?
 callback = None  # Callback function
-hotkey = [Key.f8]  # The key that's being listened for
+hotkey = []  # The keys that are being listened for
 
 
 def change_hotkey(new_hotkey, hotkey_index):
     """
-    Changes the hotkey that the listener is listening for. Will throw an AttributeError exception
-    if the passed in string isn't valid for pynput. If it isn't valid, or if an empty array is passed in,
-    hotkey will be set to an empty array
+    Changes the hotkey that the listener is listening for / adds a new hotkey to listen for.
+    If it isn't valid, or if an empty array is passed in, hotkey will be set to an empty array
     :param new_hotkey: The new hotkey for the listener to listen for. This must be a string that is processable by
         pynput (i.e. should work as Key.something)
     :param hotkey_index: The index that the hotkey should be inserted at
-    :return:
     """
     global hotkey
-    try:
-        if hotkey_index < len(hotkey):
-            if len(new_hotkey) > 1:
-                hotkey[0] = getattr(Key, new_hotkey)
-            else:
-                hotkey[hotkey_index] = KeyCode.from_char(new_hotkey)
-        else:
-            if len(new_hotkey) > 1:
-                hotkey.append(getattr(Key, new_hotkey))
-            else:
-                hotkey.append(KeyCode.from_char(new_hotkey))
-        print(hotkey)
+    if hotkey_index < len(hotkey):
+        hotkey[hotkey_index] = convert_to_pynput(new_hotkey)
+    else:
+        hotkey.append(convert_to_pynput(new_hotkey))
 
+
+def convert_to_pynput(keys):
+    try:
+        if len(keys) > 1:
+            return getattr(Key, keys)
+        else:
+            return KeyCode.from_char(keys)
     except AttributeError:
-        pass
+        return ""
 
 
 def on_press(key):
@@ -66,3 +62,8 @@ def start_listener(script=None):
         callback = script  # If we're threading, sets a callback
     listener = Listener(on_press=on_press)
     listener.start()
+
+
+def pause_listener():
+    global listener
+    listener.stop()

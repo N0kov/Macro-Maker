@@ -11,7 +11,7 @@ from popups.HotkeyPopup import HotkeyPopup
 from conditions.ImageCondition import *
 from popups.RunCountPopup import RunCountPopup
 from actions import *
-from listener import *
+import listener
 
 
 class MacroManagerMain(QMainWindow):
@@ -30,13 +30,12 @@ class MacroManagerMain(QMainWindow):
         self.macros_to_run = queue.Queue()
         self.current_running_macro = -1
 
+        # self.pause_listener = threading.Condition()
         self.start_hotkey_listener()  # Thread stuff - checking for the hotkey to run your script
         self.run_action_condition = threading.Condition()  # Notification for the thread that runs the macro
         self.start_action_thread()  # Thread that runs the macro
         self.running_macro = False  # Bool for if the macro is running or not
         self.run_count = 1  # The amount of times the script will run, associated with run_options
-
-          # The default hotkey to start / stop the macro
 
         self.setWindowTitle("Macro Manager")
         self.setGeometry(400, 200, 1100, 700)
@@ -223,7 +222,8 @@ class MacroManagerMain(QMainWindow):
 
     def run_listener(self):
         """Starts the listener, runs via the listener file. Passes in the on_hotkey_pressed definition"""
-        start_listener(self.on_hotkey_pressed)
+        listener.start_listener(self.on_hotkey_pressed)
+        listener.change_hotkey(self.hotkeys[0], 0)
 
     def on_hotkey_pressed(self, index):
         """
@@ -328,6 +328,7 @@ class MacroManagerMain(QMainWindow):
             self.present_images.append([])
             self.absent_images.append([])
             self.hotkeys.append("")
+            listener.change_hotkey(self.hotkeys[self.current_macro], self.current_macro)
             self.set_hotkey_button.setText("Set a hotkey")
             self.macro_list.blockSignals(False)
         else:
@@ -356,7 +357,7 @@ class MacroManagerMain(QMainWindow):
             except (IndexError, AttributeError):
                 self.hotkeys[self.current_macro] = ""
                 self.set_hotkey_button.setText("Set a hotkey")
-            change_hotkey(self.hotkeys[self.current_macro], self.current_macro)
+            listener.change_hotkey(self.hotkeys[self.current_macro], self.current_macro)
 
     def startDrag(self, supportedActions):  # camelCase to match with PyQt5's def
         """

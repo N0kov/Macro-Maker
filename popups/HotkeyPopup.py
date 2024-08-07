@@ -1,5 +1,6 @@
 from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
 from PyQt6.QtCore import Qt
+import inflect
 
 
 class HotkeyPopup(QDialog):
@@ -23,7 +24,7 @@ class HotkeyPopup(QDialog):
 
         self.recording = False
 
-        self.label = QLabel("Set start / stop hotkey")
+        self.label = QLabel("Press start to record a hotkey")
         self.layout.addWidget(self.label)
 
         self.horizontal_layout = QHBoxLayout()
@@ -34,7 +35,7 @@ class HotkeyPopup(QDialog):
         self.horizontal_layout.addWidget(self.start_button)
 
         self.key_combination = all_hotkeys[hotkey]
-        # self.bad_hotkeys = all_hotkeys[:hotkey] + all_hotkeys[hotkey+1:]
+        self.bad_hotkeys = all_hotkeys[:hotkey] + [""] + all_hotkeys[hotkey+1:]
 
         self.hotkey_display = QLabel(str(self.key_combination))
         self.hotkey_display.setFixedHeight(50)
@@ -72,21 +73,20 @@ class HotkeyPopup(QDialog):
         """
         self.recording = False
         self.start_button.setEnabled(True)
-        self.label.setText("Press start to start recording the new hotkey")
+        self.label.setText("Press start to record a new hotkey")
         self.start_button.setText("Start")
-        # Starting to try to prevent the user from re-using a hotkey, the current issue is that they're stored with
-        # attributes (e.g. Key.f8: <65477>) but here they're just 'f8'. The transition is currently done in listener
-        # which isn't useful here
-
-        # print("The key combo once recording stopped")
-        # print(self.key_combination)
         if self.key_combination:
-            # if self.key_combination not in self.bad_hotkeys:
-            # print("OK")
-            self.hotkey_display.setText(str(self.key_combination[-1]))
-            # else:
-            #     self.key_combination = ''
-            #     self.hotkey_display.setText("Hotkey already in use")
+            if self.key_combination[-1] not in self.bad_hotkeys:
+                self.hotkey_display.setText(str(self.key_combination[-1]))
+            else:
+                self.label.setText("Macro " + inflect.engine().number_to_words(self.bad_hotkeys.index(
+                                                                               self.key_combination[0]) + 1) +
+                                   " is already using " + str(self.key_combination[0]) +
+                                   "\n\n" + self.label.text() + "\n")
+
+                self.key_combination = ""
+                self.hotkey_display.setText("No hotkey")
+
         else:
             self.hotkey_display.setText("No hotkey")
         self.releaseKeyboard()

@@ -1,11 +1,10 @@
 import _pickle
-import pickle
 import sys
 import threading
 import inflect
+import queue
 
-from PyQt6 import QtCore
-from PyQt6.QtCore import Qt, QPoint, QEventLoop
+from PyQt6.QtCore import QPoint, QEventLoop
 from PyQt6.QtWidgets import *
 
 from popups.HotkeyPopup import HotkeyPopup
@@ -26,7 +25,10 @@ class MacroManagerMain(QMainWindow):
         self.actions = [[]]
         self.present_images = [[]]
         self.absent_images = [[]]
+        self.hotkeys = ["f8"]
         self.current_macro = 0
+        self.macros_to_run = queue.Queue()
+        self.current_running_macro = -1
 
         self.start_hotkey_listener()  # Thread stuff - checking for the hotkey to run your script
         self.run_action_condition = threading.Condition()  # Notification for the thread that runs the macro
@@ -34,7 +36,7 @@ class MacroManagerMain(QMainWindow):
         self.running_macro = False  # Bool for if the macro is running or not
         self.run_count = 1  # The amount of times the script will run, associated with run_options
 
-        self.hotkey = ["f8"]  # The default hotkey to start / stop the macro
+          # The default hotkey to start / stop the macro
 
         self.setWindowTitle("Macro Manager")
         self.setGeometry(400, 200, 1100, 700)
@@ -55,7 +57,7 @@ class MacroManagerMain(QMainWindow):
         """
         top_layout = QHBoxLayout()
         run_button = QPushButton("Run")
-        run_button.setToolTip("Press " + str(self.hotkey) + " to kill the script")
+        run_button.setToolTip("Press " + str(self.hotkeys) + " to kill the script")
         run_button.clicked.connect(self.notify_action_thread)
 
         self.run_options = QComboBox()
@@ -64,8 +66,8 @@ class MacroManagerMain(QMainWindow):
         self.run_options.addItem("Custom run count")
         self.run_options.currentIndexChanged.connect(self.run_options_clicked)
 
-        self.activation_key_button = QPushButton("Set a hotkey (currently " + str(self.hotkey[0]) + ")")
-        self.activation_key_button.clicked.connect(self.hotkey_clicked)
+        self.set_hotkey_button = QPushButton("Set a hotkey (currently " + str(self.hotkeys[0]) + ")")
+        self.set_hotkey_button.clicked.connect(self.hotkey_clicked)
 
         self.macro_list = QComboBox()
         self.macro_list.addItem("Macro one")
@@ -75,12 +77,12 @@ class MacroManagerMain(QMainWindow):
         # is very clunky
 
         save_button = QPushButton("Save")
-        save_button.clicked.connect(self.save_actions)
+        save_button.clicked.connect(self.save_macros)
         load_button = QPushButton("Load")
-        load_button.clicked.connect(self.load_actions)
+        load_button.clicked.connect(self.load_macros)
         top_layout.addWidget(run_button)
         top_layout.addWidget(self.run_options)
-        top_layout.addWidget(self.activation_key_button)
+        top_layout.addWidget(self.set_hotkey_button)
         top_layout.addWidget(self.macro_list)
         top_layout.addWidget(save_button)
         top_layout.addWidget(load_button)
@@ -100,7 +102,7 @@ class MacroManagerMain(QMainWindow):
         self.action_list = QListWidget()  # action_list has custom logic
         self.action_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)  # Right click
         self.action_list.customContextMenuRequested.connect(self.right_click_actions_menu)
-        self.action_list.setDragDropMode(QAbstractItemView.DragDropMode.DragDrop)  # Dragging
+        self.action_list.setDragDropMode(QListWidget.DragDropMode.InternalMove)  # Dragging
         self.action_list.start_pos = None
         self.action_list.startDrag = self.startDrag
         self.action_list.dropEvent = self.dropEvent
@@ -159,7 +161,7 @@ class MacroManagerMain(QMainWindow):
         self.central_widget.addWidget(self.main_view)
         self.central_widget.setCurrentWidget(self.main_view)
 
-    def run_macro(self):
+    def run_macro(self, macro):
         """
         The main script to run the macro. It checks for if all the image conditions are present / absent, then runs
         the actions. Triggered from the run button or pressing the hotkey. Killed on pressing the hotkey as well
@@ -167,6 +169,7 @@ class MacroManagerMain(QMainWindow):
         run_count being set to -1 means that it will run infinitely. Otherwise, the macro will run equal to the
         amount of times listed
         """
+
         if not self.actions:  # So processing power isn't wasted running a script that will trigger nothing
             return
 
@@ -176,8 +179,8 @@ class MacroManagerMain(QMainWindow):
             Stops if the hotkey is pressed
             """
             while self.running_macro:
-                if all(image.run() for image in self.present_images[self.current_macro]) and all(
-                        not image.run() for image in self.absent_images[self.current_macro]):
+                if all(image.run() for image in self.present_images[macro]) and all(
+                        not image.run() for image in self.absent_images[macro]):
                     return
 
         def actions_run():
@@ -185,10 +188,7 @@ class MacroManagerMain(QMainWindow):
             Runs the actions. All used actions will have a run() function
             Stops if the hotkey is pressed
             """
-            for action in self.actions[self.current_macro]:
-                if not self.running_macro:
-                    return
-                action.run()
+            [action.run() for action in self.actions[macro] if self.running_macro]
 
         def run_loop():
             """
@@ -200,10 +200,9 @@ class MacroManagerMain(QMainWindow):
                 actions_run()
 
         if self.run_count > 0:
-            for _ in range(self.run_count):
-                if not self.running_macro:
-                    break
-                run_loop()
+            # This is using list comprehension as running as fast as possible is more important than potentially wasting
+            # a bit of processing power after the script has already been killed, so the thread would be doing nothing
+            [run_loop() for _ in range(self.run_count) if self.running_macro]  # anyways
 
         elif self.run_count == - 1:
             while self.running_macro:
@@ -223,17 +222,20 @@ class MacroManagerMain(QMainWindow):
         self.macro_run_thread.start()
 
     def run_listener(self):
-        """Starts the listener, runs via Listener. Passes in the on_hotkey_pressed definition"""
+        """Starts the listener, runs via the listener file. Passes in the on_hotkey_pressed definition"""
         start_listener(self.on_hotkey_pressed)
 
-    def on_hotkey_pressed(self):
+    def on_hotkey_pressed(self, index):
         """
         Logic for when the hotkey is pressed. Triggers the macro thread when the macro isn't running, kills it
         when it is. It does this via notifying the macro thread
         """
         if not self.running_macro:
+            self.macros_to_run.put(index)
             self.notify_action_thread()
         else:
+            if self.current_running_macro != index:
+                self.macros_to_run.put(index)
             self.running_macro = False
         if not self.listener_thread.is_alive():
             self.run_listener()
@@ -247,7 +249,14 @@ class MacroManagerMain(QMainWindow):
             with self.run_action_condition:
                 self.run_action_condition.wait()
 
-            self.run_macro()
+            while not self.macros_to_run.empty():
+                # Says that the macro is running - if the previous one in the queue got cancelled early / to
+                # substantiate it if new, then sets a class var (current_running_macro) to record which macro is running
+                #  (to know when a hotkey is pressed if the macro should be added to the queue or not),
+                #  and finally runs it
+                self.running_macro = True
+                self.current_running_macro = self.macros_to_run.get()
+                self.run_macro(self.current_running_macro)
 
             self.running_macro = False
 
@@ -255,7 +264,9 @@ class MacroManagerMain(QMainWindow):
         """
         Notifies run_macro_thread to run, works via the hotkey or a press from the Run button
         """
-        self.running_macro = True
+        if self.macros_to_run.empty():
+            self.macros_to_run.put(self.current_macro)
+
         with self.run_action_condition:
             self.run_action_condition.notify()
 
@@ -316,9 +327,17 @@ class MacroManagerMain(QMainWindow):
             self.actions.append([])
             self.present_images.append([])
             self.absent_images.append([])
+            self.hotkeys.append("")
+            self.set_hotkey_button.setText("Set a hotkey")
             self.macro_list.blockSignals(False)
         else:
             self.current_macro = self.macro_list.currentIndex()
+            if self.hotkeys[self.current_macro] != "":
+                self.set_hotkey_button.setText("Set a hotkey (currently " +
+                                               str(self.hotkeys[self.current_macro]) + ")")
+            else:
+                self.set_hotkey_button.setText("Set a hotkey")
+
         self.update_action_list()
         self.update_condition_list()
 
@@ -328,15 +347,16 @@ class MacroManagerMain(QMainWindow):
         hotkey. The button is updated after with the new hotkey. If the user gives no input or an invalid input,
         the hotkey will be set to none
         """
-        popup = HotkeyPopup(self.hotkey)
+        popup = HotkeyPopup(self.current_macro, self.hotkeys)
         if popup.exec() == QDialog.DialogCode.Accepted:
             try:
-                self.hotkey = popup.key_combination
-                self.activation_key_button.setText("Set a hotkey (currently " + str(self.hotkey[0]) + ")")
+                self.hotkeys[self.current_macro] = popup.key_combination[0]
+                self.set_hotkey_button.setText("Set a hotkey (currently " +
+                                               str(self.hotkeys[self.current_macro]) + ")")
             except (IndexError, AttributeError):
-                self.hotkey = []
-                self.activation_key_button.setText("Set a hotkey (none set)")
-            change_hotkey(self.hotkey)
+                self.hotkeys[self.current_macro] = ""
+                self.set_hotkey_button.setText("Set a hotkey")
+            change_hotkey(self.hotkeys[self.current_macro], self.current_macro)
 
     def startDrag(self, supportedActions):  # camelCase to match with PyQt5's def
         """
@@ -357,36 +377,42 @@ class MacroManagerMain(QMainWindow):
         macro run in the correct order
         :param event: The menu item that's dropped. A default parameter that comes with dropEvent from PyQt5
         """
-        end_pos = self.action_list.indexAt(event.pos()).row()
+        end_pos = self.action_list.indexAt(event.position().toPoint()).row()
+
+        if end_pos == -1:
+            end_pos = self.action_list.count()
+        elif event.position().toPoint().y() < self.action_list.visualItemRect(self.action_list.item(0)).top():
+            end_pos = 0
+
         if self.action_list.dragged_item:
             action = self.actions[self.current_macro].pop(self.action_list.start_pos)
             self.actions[self.current_macro].insert(end_pos, action)
         super(QListWidget, self.action_list).dropEvent(event)
         self.update_action_list()
 
-    def save_actions(self):
+    def save_macros(self):
         """
-        Saves the actions and conditions as a pickle file with a basic GUI file explorer dialogue
+        Saves the actions, conditions and hotkeys as a pickle file with a basic GUI file explorer dialogue
         """
         options = QFileDialog.Option(0)
         file_name, _ = QFileDialog.getSaveFileName(self, "Save Macro", "",
                                                    "All Files (*);;Pickle Files (*.pkl)", options=options)
         if file_name:
-            # The issue is that ImageConditions have a QPixmap inside of them. QPixmaps cannot be pickled, so
-            # what's happening here is that all of them are being set to None so that they can be pickled,
-            # and then recovered afterward
+            # The issue is that ImageConditions have a QPixmap inside of them (used to display the captured images
+            # in the GUI). QPixmaps cannot be pickled, so this is setting all QPixmaps to None, and then recovering
+            # them afterward
             for i in range(len(self.macro_list) - 1):
                 [self.absent_images[i][j].clear_pixmap() for j in range(len(self.absent_images[i]))]
                 [self.present_images[i][j].clear_pixmap() for j in range(len(self.present_images[i]))]
 
             with open(file_name, 'wb') as f:
-                pickle.dump([self.actions, self.present_images, self.absent_images], f)
+                pickle.dump([self.actions, self.present_images, self.absent_images, self.hotkeys], f)
 
             for i in range(len(self.macro_list) - 1):
                 [self.absent_images[i][j].recover_pixmap() for j in range(len(self.absent_images[i]))]
                 [self.present_images[i][j].recover_pixmap() for j in range(len(self.present_images[i]))]
 
-    def load_actions(self):
+    def load_macros(self):
         """
         Loads the actions and conditions from a specified file in a GUI dialogue. This must be a pickle file, if
         not it will just pass. This extends the preexisting actions, present_images and absent_images lists, so
@@ -405,18 +431,27 @@ class MacroManagerMain(QMainWindow):
                     base_length = len(self.actions) + 1
                     for i in range(len(functions[0])):
                         # Recovering the Condition QPixmaps (they're set to None, so they can be pickled)
-                        [functions[1][i][j].recover_pixmap() for j in range(len(functions[1][i]))]
-                        [functions[2][i][j].recover_pixmap() for j in range(len(functions[2][i]))]
+                        [present_image.recover_pixmap() for present_image in functions[1][i]]
+                        [absent_image.recover_pixmap() for absent_image in functions[2][i]]
 
                         self.macro_list.insertItem(len(self.actions), "Macro " +
                                                    inflect.engine().number_to_words(i + base_length))
                         self.actions.append(functions[0][i])
                         self.present_images.append(functions[1][i])
                         self.absent_images.append(functions[2][i])
+                        if functions[3][i] not in self.hotkeys:
+                            self.hotkeys.append(functions[3][i])
+                        else:
+                            self.hotkeys.append("")
 
                     self.macro_list.blockSignals(True)
                     self.current_macro = len(self.macro_list) - 2
                     self.macro_list.setCurrentIndex(len(self.macro_list) - 2)
+                    if self.hotkeys[self.current_macro] != "":
+                        self.set_hotkey_button.setText("Set a hotkey (currently " +
+                                                       str(self.hotkeys[self.current_macro]) + ")")
+                    else:
+                        self.set_hotkey_button.setText("Set a hotkey")
                     self.macro_list.blockSignals(False)
 
                     self.condition_display.clear()
@@ -494,9 +529,9 @@ class MacroManagerMain(QMainWindow):
         """
         if self.actions[self.current_macro]:
             for i in range(len(self.actions[self.current_macro]) - 1, 0, -1):
-                if not isinstance(self.actions[self.current_macro][i], Wait):
-                    if not isinstance(self.actions[self.current_macro][i - 1], Wait):
-                        self.actions[self.current_macro].insert(i, wait)
+                if (not isinstance(self.actions[self.current_macro][i], Wait) and
+                        not isinstance(self.actions[self.current_macro][i - 1], Wait)):
+                    self.actions[self.current_macro].insert(i, wait)
             self.update_action_list()
 
     def switch_to_add_condition_view(self):
@@ -564,7 +599,6 @@ class MacroManagerMain(QMainWindow):
         :param position: The position in condition_list that was selected by the user. This specified the ImageCondition
             object to be displayed
         """
-
         condition = position.data(QtCore.Qt.ItemDataRole.UserRole)
         pixmap = condition.image_pixmap
         scaled_pixmap = pixmap.scaled(self.condition_display.size(), Qt.AspectRatioMode.KeepAspectRatio,

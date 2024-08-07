@@ -1,31 +1,37 @@
 from pynput.keyboard import Key, Listener, KeyCode
+from queue import Queue
 
 
 # Base parameters
-running = False  # Is it running?
 listener = None  # Is the listener active?
 callback = None  # Callback function
 hotkey = [Key.f8]  # The key that's being listened for
 
 
-
-def change_hotkey(new_hotkey):
+def change_hotkey(new_hotkey, hotkey_index):
     """
     Changes the hotkey that the listener is listening for. Will throw an AttributeError exception
     if the passed in string isn't valid for pynput. If it isn't valid, or if an empty array is passed in,
     hotkey will be set to an empty array
     :param new_hotkey: The new hotkey for the listener to listen for. This must be a string that is processable by
         pynput (i.e. should work as Key.something)
+    :param hotkey_index: The index that the hotkey should be inserted at
     :return:
     """
     global hotkey
-    hotkey = []
     try:
-        for key in new_hotkey:
-            if len(key) > 1:
-                hotkey.append(getattr(Key, key))
+        if hotkey_index < len(hotkey):
+            if len(new_hotkey) > 1:
+                hotkey[0] = getattr(Key, new_hotkey)
             else:
-                hotkey.append(KeyCode.from_char(key))
+                hotkey[hotkey_index] = KeyCode.from_char(new_hotkey)
+        else:
+            if len(new_hotkey) > 1:
+                hotkey.append(getattr(Key, new_hotkey))
+            else:
+                hotkey.append(KeyCode.from_char(new_hotkey))
+        print(hotkey)
+
     except AttributeError:
         pass
 
@@ -38,16 +44,15 @@ def on_press(key):
     on_press, it's good to be better safe than sorry
     :param key: A key that the user pressed. Must be in pynput form
     """
-    global running, listener
+    global listener
     try:
-        if key == hotkey[0]:  # Currently only single keys are allowed, as I don't know how to process multiple
-            running = False
+        if key in hotkey:  # Currently only single keys are allowed, as I don't know how to process multiple
             if listener is not None:
                 listener.stop()
                 if callback:  # For if we're doing threading
-                    callback()
+                    callback(hotkey.index(key))
     except Exception as e:
-        pass
+        print("on_press exception: " + str(e))
 
 
 def start_listener(script=None):
@@ -56,20 +61,8 @@ def start_listener(script=None):
     All keyboard inputs get sent to on_press
     :param script: A script or definition. Said script / def does not need to be imported to Listener
     """
-    global listener, running, callback
-    running = True
+    global listener, callback
     if script is not None:
         callback = script  # If we're threading, sets a callback
     listener = Listener(on_press=on_press)
     listener.start()
-
-
-def wait_for_key_press():
-    """
-    This is an encapsulated variant to pause the thread and wait for when the hotkey is pressed and then stop the
-    listener, effectively resuming the thread
-    """
-    start_listener()
-    while running:
-        pass
-    listener.stop()

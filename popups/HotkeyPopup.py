@@ -7,10 +7,11 @@ class HotkeyPopup(QDialog):
     The popup for changing the start / stop hotkey. Captures the user's input and displays it to them. Returns to UI3
     after
     """
-    def __init__(self, hotkey, parent=None):
+    def __init__(self, hotkey, all_hotkeys, parent=None):
         """
         Initializes the popup, and creates the buttons and labels. Sets the initial hotkey to be the passed in hotkey
-        :param hotkey: The current hotkey that's being used to be displayed in hotkey_display. Must be a list
+        :param hotkey: The hotkey in the given list that is in use
+        :param all_hotkeys: All hotkeys currently in use. Must be a list
         :param parent: The parent widget. Defaults to None
         """
         super().__init__(parent)
@@ -22,7 +23,7 @@ class HotkeyPopup(QDialog):
 
         self.recording = False
 
-        self.label = QLabel("Set start/ stop hotkey")
+        self.label = QLabel("Set start / stop hotkey")
         self.layout.addWidget(self.label)
 
         self.horizontal_layout = QHBoxLayout()
@@ -32,9 +33,10 @@ class HotkeyPopup(QDialog):
         self.start_button.clicked.connect(self.start_recording)
         self.horizontal_layout.addWidget(self.start_button)
 
-        self.key_combination = hotkey
+        self.key_combination = all_hotkeys[hotkey]
+        # self.bad_hotkeys = all_hotkeys[:hotkey] + all_hotkeys[hotkey+1:]
 
-        self.hotkey_display = QLabel(str(self.key_combination[0]))
+        self.hotkey_display = QLabel(str(self.key_combination))
         self.hotkey_display.setFixedHeight(50)
         self.hotkey_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.horizontal_layout.addWidget(self.hotkey_display)
@@ -59,6 +61,7 @@ class HotkeyPopup(QDialog):
         self.recording = True
         self.key_combination = []
         self.label.setText("Recording started. Press keys...")
+        self.start_button.setText("Recording")
         self.start_button.setEnabled(False)
         self.grabKeyboard()
 
@@ -70,8 +73,20 @@ class HotkeyPopup(QDialog):
         self.recording = False
         self.start_button.setEnabled(True)
         self.label.setText("Press start to start recording the new hotkey")
+        self.start_button.setText("Start")
+        # Starting to try to prevent the user from re-using a hotkey, the current issue is that they're stored with
+        # attributes (e.g. Key.f8: <65477>) but here they're just 'f8'. The transition is currently done in listener
+        # which isn't useful here
+
+        # print("The key combo once recording stopped")
+        # print(self.key_combination)
         if self.key_combination:
+            # if self.key_combination not in self.bad_hotkeys:
+            # print("OK")
             self.hotkey_display.setText(str(self.key_combination[-1]))
+            # else:
+            #     self.key_combination = ''
+            #     self.hotkey_display.setText("Hotkey already in use")
         else:
             self.hotkey_display.setText("No hotkey")
         self.releaseKeyboard()

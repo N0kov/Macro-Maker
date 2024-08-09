@@ -1,4 +1,5 @@
 import _pickle
+import pickle
 import sys
 import threading
 import inflect
@@ -26,11 +27,11 @@ class MacroManagerMain(QMainWindow):
         self.present_images = [[]]
         self.absent_images = [[]]
         self.hotkeys = ["f8"]
+        listener.change_hotkey(self.hotkeys[0], 0)
         self.current_macro = 0
         self.macros_to_run = queue.Queue()
         self.current_running_macro = -1
 
-        # self.pause_listener = threading.Condition()
         self.start_hotkey_listener()  # Thread stuff - checking for the hotkey to run your script
         self.run_action_condition = threading.Condition()  # Notification for the thread that runs the macro
         self.start_action_thread()  # Thread that runs the macro
@@ -128,32 +129,64 @@ class MacroManagerMain(QMainWindow):
 
         middle_layout.addWidget(actions_frame)
 
-        conditions_frame = QFrame()  # Conditions start here
+        conditions_frame = QFrame()
         conditions_frame.setFrameShape(QFrame.Shape.StyledPanel)
+        conditions_frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         conditions_layout = QVBoxLayout(conditions_frame)
-        conditions_label = QLabel("Conditions")
-        conditions_layout.addWidget(conditions_label)
+        conditions_layout.setContentsMargins(0, 0, 0, 10)
+        # conditions_layout.setSpacing(0)
 
-        self.current_displayed_condition = None
-        self.condition_list = QListWidget()
-        self.condition_list.itemClicked.connect(self.display_selected_condition)
-        self.condition_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)  # Right click menu
-        self.condition_list.customContextMenuRequested.connect(self.right_click_actions_menu)
-        conditions_layout.addWidget(self.condition_list)
+        # conditions_label = QLabel("Conditions")
+        # conditions_label.setFixedHeight(25)
+        # conditions_layout.addWidget(conditions_label)
+
+        present_container = QVBoxLayout()
+        absent_container = QVBoxLayout()
+
+        present_container.addWidget(QLabel("Present images"))
+        absent_container.addWidget(QLabel("Absent images"))
+
+        p_grid_scroll_area = QScrollArea()
+        p_grid_scroll_area.setWidgetResizable(True)
+        p_grid_widget = QWidget()
+        self.p_image_grid = QGridLayout(p_grid_widget)
+        p_grid_scroll_area.setWidget(p_grid_widget)
+
+        a_grid_scroll_area = QScrollArea()
+        a_grid_scroll_area.setWidgetResizable(True)
+        a_grid_widget = QWidget()
+        self.a_image_grid = QGridLayout(a_grid_widget)
+        a_grid_scroll_area.setWidget(a_grid_widget)
+
+        self.image_dimensions = 150
+        spacing = 8
+        for condition_type in (self.p_image_grid, self.a_image_grid):
+            # condition_type.columns = (p_grid_widget.width() - spacing*3) // self.image_dimensions
+            condition_type.columns = 3
+            condition_type.setVerticalSpacing(spacing)
+            condition_type.setHorizontalSpacing(spacing)
+
+        present_container.addWidget(p_grid_scroll_area)
+        absent_container.addWidget(a_grid_scroll_area)
+
+        present_widget = QWidget()
+        present_widget.setLayout(present_container)
+        conditions_layout.addWidget(present_widget)
+
+        absent_widget = QWidget()
+        absent_widget.setLayout(absent_container)
+        conditions_layout.addWidget(absent_widget)
 
         condition_button = QPushButton("+")
         condition_button.setFixedSize(40, 40)
         condition_button.setStyleSheet(plus_button_stylesheet)
         condition_button.clicked.connect(self.switch_to_add_condition_view)
 
-        conditions_layout.addWidget(condition_button, alignment=QtCore.Qt.AlignmentFlag.AlignRight |
-                                                                QtCore.Qt.AlignmentFlag.AlignBottom)
+        # conditions_layout.addWidget(condition_button, alignment=QtCore.Qt.AlignmentFlag.AlignRight |
+        #                                                         QtCore.Qt.AlignmentFlag.AlignBottom)
 
-        self.condition_display = QLabel()
-        self.condition_display.setFixedSize(500, 270)
-        self.condition_display.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        conditions_layout.addWidget(self.condition_display)
-
+        conditions_layout.addWidget(condition_button,
+                                    alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignBottom)
         middle_layout.addWidget(conditions_frame)
 
         self.main_layout.addLayout(middle_layout)
@@ -223,7 +256,6 @@ class MacroManagerMain(QMainWindow):
     def run_listener(self):
         """Starts the listener, runs via the listener file. Passes in the on_hotkey_pressed definition"""
         listener.start_listener(self.on_hotkey_pressed)
-        listener.change_hotkey(self.hotkeys[0], 0)
 
     def on_hotkey_pressed(self, index):
         """
@@ -371,7 +403,7 @@ class MacroManagerMain(QMainWindow):
         self.action_list.dragged_item = self.action_list.currentItem()
         super(QListWidget, self.action_list).startDrag(supportedActions)
 
-    def dropEvent(self, event):  # camelCase to match with PyQt5's def
+    def dropEvent(self, event, **kwargs):  # camelCase to match with PyQt5's def
         """
         Overwrites the dropEvent def from PyQt5. It still moves the UI element to the new position, but additionally
         moves the action object in self.action_list to the new position to permanently make the switch and have the
@@ -444,6 +476,7 @@ class MacroManagerMain(QMainWindow):
                             self.hotkeys.append(functions[3][i])
                         else:
                             self.hotkeys.append("")
+                        listener.change_hotkey(self.hotkeys[i], i)
 
                     self.macro_list.blockSignals(True)
                     self.current_macro = len(self.macro_list) - 2
@@ -455,7 +488,7 @@ class MacroManagerMain(QMainWindow):
                         self.set_hotkey_button.setText("Set a hotkey")
                     self.macro_list.blockSignals(False)
 
-                    self.condition_display.clear()
+                    self.clear_condition_display()
                     self.update_action_list()
                     self.update_condition_list()
         except (_pickle.UnpicklingError, EOFError):  # If you click on a non-pickle file / a corrupt pkl file
@@ -583,33 +616,82 @@ class MacroManagerMain(QMainWindow):
         Refreshes the condition list so that all conditions are visible to the user. They're detonated in the UI
         as "Present Image" or "Absent Image"
         """
-        self.condition_list.clear()
-        for condition in self.present_images[self.current_macro]:
-            item = QListWidgetItem("Present Image")
-            item.setData(QtCore.Qt.ItemDataRole.UserRole, condition)
-            self.condition_list.addItem(item)
-        for condition in self.absent_images[self.current_macro]:
-            item = QListWidgetItem("Absent Image")
-            item.setData(QtCore.Qt.ItemDataRole.UserRole, condition)
-            self.condition_list.addItem(item)
+        self.clear_condition_display(self.p_image_grid)
+        self.clear_condition_display(self.a_image_grid)
 
-    def display_selected_condition(self, position):
-        """
-        For when the user clicks on one of the images in the condition list. It shows the image from the specified
-        ImageCondition object in the bottom right of the UI
-        :param position: The position in condition_list that was selected by the user. This specified the ImageCondition
-            object to be displayed
-        """
-        condition = position.data(QtCore.Qt.ItemDataRole.UserRole)
-        pixmap = condition.image_pixmap
-        scaled_pixmap = pixmap.scaled(self.condition_display.size(), Qt.AspectRatioMode.KeepAspectRatio,
+        # condition_types = QVBoxLayout
+        # present_conditions = QVBoxLayout
+        # present_conditions.addWidget(QLabel("Present images"))
+        for i in range(len(self.present_images[self.current_macro])):
+            # vbox = QVBoxLayout()
+            # label = QLabel("present")
+            # label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            # vbox.addWidget(label)
+            image, row, col = self.create_image(i, self.present_images, self.p_image_grid)
+            # vbox.addWidget(image)
+            # temp = QWidget()
+            # temp.setLayout(vbox)
+            self.p_image_grid.addWidget(image, row, col)
+                                          # alignment=Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+
+        for i in range(len(self.absent_images[self.current_macro])):
+            label, row, col = self.create_image(i, self.absent_images, self.a_image_grid)
+            self.a_image_grid.addWidget(label, row, col)
+                                          # alignment=Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
+
+    def clear_condition_display(self, grid):
+        # while grid.count():
+        #     item = grid.takeAt(0)
+        #     widget = item.widget()
+        #     if widget is not None:
+        #         widget.deleteLater()
+
+        for i in reversed(range(self.p_image_grid.count())):
+            item = self.p_image_grid.itemAt(i)
+            widget = item.widget()
+            if isinstance(widget, QLabel):
+                self.p_image_grid.takeAt(i)
+                widget.deleteLater()
+
+        # Clear QLabels from a_image_grid
+        for i in reversed(range(self.a_image_grid.count())):
+            item = self.a_image_grid.itemAt(i)
+            widget = item.widget()
+            if isinstance(widget, QLabel):
+                self.a_image_grid.takeAt(i)
+                widget.deleteLater()
+    def create_image(self, i, image_list, condition_grid):
+        pixmap = image_list[self.current_macro][i].image_pixmap
+        label = QLabel()
+        label.setFixedSize(self.image_dimensions, self.image_dimensions)
+        scaled_pixmap = pixmap.scaled(label.size(), Qt.AspectRatioMode.KeepAspectRatio,
                                       Qt.TransformationMode.SmoothTransformation)
-        self.condition_display.setPixmap(scaled_pixmap)
+        label.setPixmap(scaled_pixmap)
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        row = i // condition_grid.columns
+        print(i)
+        print("Row: " + str(row))
+        col = i % condition_grid.columns
+        print("Col: " + str(col))
+        return label, row, col
 
-        if condition in self.present_images[self.current_macro]:
-            self.current_displayed_condition = self.present_images[self.current_macro].index(condition)
-        elif condition in self.absent_images[self.current_macro]:
-            self.current_displayed_condition = self.absent_images[self.current_macro].index(condition)
+    # def display_selected_condition(self, position):
+    #     """
+    #     For when the user clicks on one of the images in the condition list. It shows the image from the specified
+    #     ImageCondition object in the bottom right of the UI
+    #     :param position: The position in condition_list that was selected by the user.
+    #         This specified the ImageCondition object to be displayed
+    #     """
+    #     condition = position.data(QtCore.Qt.ItemDataRole.UserRole)
+    #     pixmap = condition.image_pixmap
+    #     scaled_pixmap = pixmap.scaled(self.condition_display.size(), Qt.AspectRatioMode.KeepAspectRatio,
+    #                                   Qt.TransformationMode.SmoothTransformation)
+    #     self.condition_display.setPixmap(scaled_pixmap)
+    #
+    #     if condition in self.present_images[self.current_macro]:
+    #         self.current_displayed_condition = self.present_images[self.current_macro].index(condition)
+    #     elif condition in self.absent_images[self.current_macro]:
+    #         self.current_displayed_condition = self.absent_images[self.current_macro].index(condition)
 
     def right_click_actions_menu(self, position: QPoint):
         """
@@ -640,11 +722,11 @@ class MacroManagerMain(QMainWindow):
                         self.remove_action_or_condition(item, self.actions[self.current_macro])
                     elif item in self.absent_images[self.current_macro]:
                         if self.current_displayed_condition == self.absent_images[self.current_macro].index(item):
-                            self.condition_display.clear()
+                            self.clear_condition_display()
                         self.remove_action_or_condition(item, self.absent_images[self.current_macro])
                     elif item in self.present_images[self.current_macro]:
                         if self.current_displayed_condition == self.present_images[self.current_macro].index(item):
-                            self.condition_display.clear()
+                            self.clear_condition_display()
                         self.remove_action_or_condition(item, self.present_images[self.current_macro])
 
                 elif selected_action == copy_item:
@@ -705,7 +787,6 @@ def main():
 
     with open('main_style.qss', 'r') as file:
         dark_stylesheet = file.read()
-
     app.setStyleSheet(dark_stylesheet)
 
     main_window = MacroManagerMain()

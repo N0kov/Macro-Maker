@@ -189,7 +189,8 @@ class ImageConditionUI(QtWidgets.QWidget):
             return True
 
         if self.top_left_temp and self.bottom_right_temp:
-            if event.type() == QEvent.Type.KeyPress and event.key() == QtCore.Qt.Key.Key_Alt:
+            if (event.type() == QEvent.Type.KeyPress and event.key() == QtCore.Qt.Key.Key_Alt
+                    and self.top_left_temp != self.bottom_right_temp):
                 check_sizes(self.top_left_temp, self.bottom_right_temp)
 
                 self.top_left_permanent = self.top_left_temp.copy()

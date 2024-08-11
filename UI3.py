@@ -5,14 +5,15 @@ import threading
 import inflect
 import queue
 
-from PyQt6.QtCore import QPoint, QEventLoop
+from PyQt6.QtCore import QEventLoop
 from PyQt6.QtWidgets import *
 
 from popups.HotkeyPopup import HotkeyPopup
 from conditions.ImageCondition import *
 from popups.RunCountPopup import RunCountPopup
 from actions import *
-import listener
+from misc_utilities import listener
+from misc_utilities.ClickableQLabel import ClickableLabel
 
 
 class MacroManagerMain(QMainWindow):
@@ -102,6 +103,7 @@ class MacroManagerMain(QMainWindow):
         self.action_list = QListWidget()  # action_list has custom logic
         self.action_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)  # Right click
         self.action_list.customContextMenuRequested.connect(self.right_click_actions_menu)
+        self.action_list.itemDoubleClicked.connect(self.call_edit_double_click)  # Double click = edit
         self.action_list.setDragDropMode(QListWidget.DragDropMode.InternalMove)  # Dragging
         self.action_list.start_pos = None
         self.action_list.startDrag = self.startDrag
@@ -619,18 +621,8 @@ class MacroManagerMain(QMainWindow):
         self.clear_condition_display(self.p_image_grid)
         self.clear_condition_display(self.a_image_grid)
 
-        # condition_types = QVBoxLayout
-        # present_conditions = QVBoxLayout
-        # present_conditions.addWidget(QLabel("Present images"))
         for i in range(len(self.present_images[self.current_macro])):
-            # vbox = QVBoxLayout()
-            # label = QLabel("present")
-            # label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            # vbox.addWidget(label)
             image, row, col = self.create_image(i, self.present_images, self.p_image_grid)
-            # vbox.addWidget(image)
-            # temp = QWidget()
-            # temp.setLayout(vbox)
             self.p_image_grid.addWidget(image, row, col)
                                           # alignment=Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
 
@@ -639,79 +631,45 @@ class MacroManagerMain(QMainWindow):
             self.a_image_grid.addWidget(label, row, col)
                                           # alignment=Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignLeft)
 
-    def clear_condition_display(self, grid):
-        # while grid.count():
-        #     item = grid.takeAt(0)
-        #     widget = item.widget()
-        #     if widget is not None:
-        #         widget.deleteLater()
-
-        for i in reversed(range(self.p_image_grid.count())):
-            item = self.p_image_grid.itemAt(i)
+    @staticmethod
+    def clear_condition_display(grid):
+        for i in reversed(range(grid.count())):
+            item = grid.itemAt(i)
             widget = item.widget()
-            if isinstance(widget, QLabel):
-                self.p_image_grid.takeAt(i)
-                widget.deleteLater()
+            grid.takeAt(i)
+            widget.deleteLater()
 
-        # Clear QLabels from a_image_grid
-        for i in reversed(range(self.a_image_grid.count())):
-            item = self.a_image_grid.itemAt(i)
-            widget = item.widget()
-            if isinstance(widget, QLabel):
-                self.a_image_grid.takeAt(i)
-                widget.deleteLater()
     def create_image(self, i, image_list, condition_grid):
         pixmap = image_list[self.current_macro][i].image_pixmap
-        label = QLabel()
+        label = ClickableLabel(self.right_click_condition_menu)
+        # label.clicked.connect(self.right_click_actions_menu)
         label.setFixedSize(self.image_dimensions, self.image_dimensions)
         scaled_pixmap = pixmap.scaled(label.size(), Qt.AspectRatioMode.KeepAspectRatio,
                                       Qt.TransformationMode.SmoothTransformation)
         label.setPixmap(scaled_pixmap)
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         row = i // condition_grid.columns
-        print(i)
-        print("Row: " + str(row))
+        # print(i)
+        # print("Row: " + str(row))
         col = i % condition_grid.columns
-        print("Col: " + str(col))
+        # print("Col: " + str(col))
         return label, row, col
 
-    # def display_selected_condition(self, position):
-    #     """
-    #     For when the user clicks on one of the images in the condition list. It shows the image from the specified
-    #     ImageCondition object in the bottom right of the UI
-    #     :param position: The position in condition_list that was selected by the user.
-    #         This specified the ImageCondition object to be displayed
-    #     """
-    #     condition = position.data(QtCore.Qt.ItemDataRole.UserRole)
-    #     pixmap = condition.image_pixmap
-    #     scaled_pixmap = pixmap.scaled(self.condition_display.size(), Qt.AspectRatioMode.KeepAspectRatio,
-    #                                   Qt.TransformationMode.SmoothTransformation)
-    #     self.condition_display.setPixmap(scaled_pixmap)
-    #
-    #     if condition in self.present_images[self.current_macro]:
-    #         self.current_displayed_condition = self.present_images[self.current_macro].index(condition)
-    #     elif condition in self.absent_images[self.current_macro]:
-    #         self.current_displayed_condition = self.absent_images[self.current_macro].index(condition)
-
-    def right_click_actions_menu(self, position: QPoint):
+    def right_click_actions_menu(self, position):
         """
         The menu for right-clicking on an action or condition. It creates a clickable dropdown menu, that allows the
-        user to copy an item, edit one or delete the item. Copying and editing only work for actions. If the condition
-        that's being displayed is deleted, it stops being displayed
-        :param position: The x,y coordinates that the user's mouse was at when the right-clicked on the item
+        user to copy an item, edit one or delete the item.
+        :param position: The QPoint x,y coordinates that the user's mouse was at when the right-clicked on the item
         """
         sender = self.sender()
         menu = QMenu()
-        copy_item = None
-        edit_item = None
-        if sender is not self.condition_list:
-            copy_item = menu.addAction("Copy")
-            edit_item = menu.addAction("Edit")
+        copy_item = menu.addAction("Copy")
+        edit_item = menu.addAction("Edit")
         remove_item = menu.addAction("Remove")
 
-        if sender == self.action_list or sender == self.condition_list:
+        if sender == self.action_list:
 
-            global_position = sender.viewport().mapToGlobal(position)  # Aligning the right click box
+            global_position = sender.viewport().mapToGlobal(position)
             selected_action = menu.exec(global_position)
             item = sender.itemAt(position)
             if item is not None:
@@ -719,15 +677,8 @@ class MacroManagerMain(QMainWindow):
 
                 if selected_action == remove_item:
                     if item in self.actions[self.current_macro]:
-                        self.remove_action_or_condition(item, self.actions[self.current_macro])
-                    elif item in self.absent_images[self.current_macro]:
-                        if self.current_displayed_condition == self.absent_images[self.current_macro].index(item):
-                            self.clear_condition_display()
-                        self.remove_action_or_condition(item, self.absent_images[self.current_macro])
-                    elif item in self.present_images[self.current_macro]:
-                        if self.current_displayed_condition == self.present_images[self.current_macro].index(item):
-                            self.clear_condition_display()
-                        self.remove_action_or_condition(item, self.present_images[self.current_macro])
+                        self.actions[self.current_macro].remove(item)
+                        self.update_action_list()
 
                 elif selected_action == copy_item:
                     self.actions[self.current_macro].append(item)
@@ -742,6 +693,34 @@ class MacroManagerMain(QMainWindow):
                         self.update_action_list()
 
         sender.clearSelection()
+
+    def right_click_condition_menu(self, position, item):
+        """
+        The menu for right-clicking on an action or condition. It creates a clickable dropdown menu, that allows the
+        user to delete the item
+        :param position: The QPoint x, y coordinates that the user's mouse was at when the item was right-clicked on
+        :param item: The item to be removed
+        """
+        menu = QMenu()
+        remove_item = menu.addAction("Remove")
+        selected_action = menu.exec(position)
+
+        if selected_action == remove_item:
+            self.remove_condition(item)
+
+    def remove_condition(self, label):
+        """
+        Removes the condition from the
+        """
+        for condition_list in (self.p_image_grid, self.a_image_grid):
+            for i in range(condition_list.count()):
+                if condition_list.itemAt(i).widget() == label:
+                    if condition_list == self.p_image_grid:
+                        self.present_images[self.current_macro].remove(self.present_images[self.current_macro][i])
+                    else:
+                        self.absent_images[self.current_macro].remove(self.absent_images[self.current_macro][i])
+                    self.update_condition_list()
+                    break
 
     def call_ui_with_params(self, item):
         """
@@ -767,25 +746,19 @@ class MacroManagerMain(QMainWindow):
         self.event_loop = QEventLoop()
         self.event_loop.exec()
 
-    def remove_action_or_condition(self, item, item_list):
+    def call_edit_double_click(self, item):
         """
-        Removes the action / condition specified in right_click_actions_menu from their respective list, then
-        updates the UI
-        :param item: Either an Action or an ImageCondition (specified by the user)
-        :param item_list: The associated list with the item. For Actions, this is actions, if it's a condition
-            it'll either be present_images or absent_images
+        Gets the data from the passed in item widget, then sends it to call_ui_with_params - a direct .connect() won't
+        give it in the right form
+        :param item: The widget to be edited
         """
-        item_list.remove(item)
-        if item_list is self.actions[self.current_macro]:
-            self.update_action_list()
-        else:
-            self.update_condition_list()
-
+        item = item.data(Qt.ItemDataRole.UserRole)
+        self.call_ui_with_params(item)
 
 def main():
     app = QApplication(sys.argv)
 
-    with open('main_style.qss', 'r') as file:
+    with open('misc_utilities/main_style.qss', 'r') as file:
         dark_stylesheet = file.read()
     app.setStyleSheet(dark_stylesheet)
 

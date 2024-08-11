@@ -62,8 +62,3 @@ def start_listener(script=None):
         callback = script  # If we're threading, sets a callback
     listener = Listener(on_press=on_press)
     listener.start()
-
-
-def pause_listener():
-    global listener
-    listener.stop()

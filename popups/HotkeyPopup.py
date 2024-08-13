@@ -35,6 +35,7 @@ class HotkeyPopup(QDialog):
         self.horizontal_layout.addWidget(self.start_button)
 
         self.key_combination = all_hotkeys[hotkey]
+        # print(self.key_combination)
         self.bad_hotkeys = all_hotkeys[:hotkey] + [""] + all_hotkeys[hotkey+1:]
 
         self.hotkey_display = QLabel(str(self.key_combination))

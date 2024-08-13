@@ -58,9 +58,8 @@ class MacroManagerMain(QMainWindow):
         Initializes the top section of the UI where the buttons are for running, changing the run count, etc.
         """
         top_layout = QHBoxLayout()
-        run_button = QPushButton("Run")
-        run_button.setToolTip("Press " + str(self.hotkeys) + " to kill the script")
-        run_button.clicked.connect(self.notify_action_thread)
+        self.run_button = QPushButton("Run")
+        self.run_button.clicked.connect(self.notify_action_thread)
 
         self.run_options = QComboBox()
         self.run_options.addItem("Run once")
@@ -82,7 +81,7 @@ class MacroManagerMain(QMainWindow):
         save_button.clicked.connect(self.save_macros)
         load_button = QPushButton("Load")
         load_button.clicked.connect(self.load_macros)
-        top_layout.addWidget(run_button)
+        top_layout.addWidget(self.run_button)
         top_layout.addWidget(self.run_options)
         top_layout.addWidget(self.set_hotkey_button)
         top_layout.addWidget(self.macro_list)
@@ -202,7 +201,6 @@ class MacroManagerMain(QMainWindow):
         run_count being set to -1 means that it will run infinitely. Otherwise, the macro will run equal to the
         amount of times listed
         """
-
         if not self.actions:  # So processing power isn't wasted running a script that will trigger nothing
             return
 
@@ -255,9 +253,9 @@ class MacroManagerMain(QMainWindow):
         Sets the current macro's run count (in run_counts) to whatever item is selected from run_options
         :return:
         """
-        if self.run_options.itemText(self.current_macro) == "Run once":
+        if self.run_options.currentText() == "Run once":
             self.run_counts[self.current_macro] = 1
-        elif self.run_options.itemText(self.current_macro) == "Run infinitely":
+        elif self.run_options.currentText() == "Run infinitely":
             self.run_counts[self.current_macro] = -1
         elif len(self.run_options) == 4 and self.run_options.currentIndex() == 1:
             run_count_string = self.run_options.currentText().split()[1]
@@ -738,10 +736,12 @@ class MacroManagerMain(QMainWindow):
         """
         if not self.running_macro:
             self.macros_to_run.put(index)
-            self.notify_action_thread()
+            self.notify_action_thread(True)
         else:
             if self.current_running_macro != index:
                 self.macros_to_run.put(index)
+            else:
+                self.run_button.setText("Stopping")
             self.running_macro = False
         if not self.listener_thread.is_alive():
             self.run_listener()
@@ -764,14 +764,22 @@ class MacroManagerMain(QMainWindow):
                 self.current_running_macro = self.macros_to_run.get()
                 self.run_macro(self.current_running_macro)
 
+            self.run_button.setText("Run")
             self.running_macro = False
 
-    def notify_action_thread(self):
+    def notify_action_thread(self, from_hotkey):
         """
-        Notifies run_macro_thread to run, works via the hotkey or a press from the Run button
+        Notifies run_macro_thread to run, works via the hotkey or a press from the Run button. Also sets the
+        run button to say Stop, which can be clicked to stop the macro (will display Stopping while stopping)
         """
-        if self.macros_to_run.empty():
-            self.macros_to_run.put(self.current_macro)
+        if from_hotkey or self.run_button.text() == "Run":
+            if self.macros_to_run.empty():
+                self.macros_to_run.put(self.current_macro)
+            self.run_button.setText("Stop")
+        elif not from_hotkey and self.run_button.text() == "Stop":
+            self.macros_to_run.empty()
+            self.run_button.setText("Stopping")
+            self.running_macro = False
 
         with self.run_action_condition:
             self.run_action_condition.notify()

@@ -2,11 +2,9 @@ from conditions.image_similarity_detector import compare_images, threshold_calcu
 import numpy as np
 from pynput.mouse import Controller
 from PyQt6 import QtWidgets, QtCore, QtGui
-from PyQt6.QtGui import QPixmap, QImage
-from PyQt6.QtCore import Qt, QEvent, QByteArray, QBuffer, QIODevice
+from PyQt6.QtGui import QPixmap, QPainter, QImage, QColor, QFont
+from PyQt6.QtCore import Qt, QEvent
 from PyQt6.QtWidgets import QVBoxLayout, QLabel, QComboBox, QPushButton
-import pickle
-# from io import BytesIO
 
 
 class ImageCondition:
@@ -15,7 +13,7 @@ class ImageCondition:
     the same as what's on screen and can return the current image
     """
 
-    def __init__(self, top_left, bottom_right, image):
+    def __init__(self, top_left, bottom_right, image, present_or_not):
         check_sizes(top_left, bottom_right)
         self.coordinates = [[top_left[0], top_left[1]], [bottom_right[0], bottom_right[1]]]
 
@@ -28,6 +26,7 @@ class ImageCondition:
 
         self.image = np.array(self.image)
         self.image_pixmap = QPixmap.fromImage(image_qt)
+        # self.add_text_above_image(present_or_not)
 
         self.threshold = threshold_calculation(self.image)
 
@@ -38,6 +37,42 @@ class ImageCondition:
         :return: True if what's on screen is very similar to the reference image, False otherwise
         """
         return compare_images(self.image, self.coordinates, self.threshold)
+
+    def add_text_above_image(self, text):
+        image_width, image_height = self.image_pixmap.width(), self.image_pixmap.height()
+
+        # Create a QLabel to render the text
+        label = QLabel()
+        if text == "p":
+            text = "present"
+        else:
+            text = "absent"
+        label.setText(text)
+        label.setStyleSheet(f"color: white; font-family: {"Arial"}; font-size: {20}px;")
+        label.adjustSize()
+        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        # Create a QPixmap with transparent background for the text
+        text_pixmap = QPixmap(label.size())
+        text_pixmap.fill(Qt.GlobalColor.transparent)  # Transparent background
+
+        # Render the text onto the text_pixmap
+        painter = QPainter(text_pixmap)
+        label.render(painter)
+        painter.end()
+
+        # Calculate the new image height and create a new QPixmap for the final image
+        final_image_height = image_height + text_pixmap.height()
+        final_pixmap = QPixmap(image_width, final_image_height)
+        final_pixmap.fill(Qt.GlobalColor.transparent)
+
+        # Combine the text and the original image
+        painter = QPainter(final_pixmap)
+        painter.drawPixmap(0, 0, text_pixmap)
+        painter.drawPixmap(0, text_pixmap.height(), self.image_pixmap)
+        painter.end()
+
+        self.image_pixmap = final_pixmap
 
     def clear_pixmap(self):
         """
@@ -154,7 +189,8 @@ class ImageConditionUI(QtWidgets.QWidget):
             return True
 
         if self.top_left_temp and self.bottom_right_temp:
-            if event.type() == QEvent.Type.KeyPress and event.key() == QtCore.Qt.Key.Key_Alt:
+            if (event.type() == QEvent.Type.KeyPress and event.key() == QtCore.Qt.Key.Key_Alt
+                    and self.top_left_temp != self.bottom_right_temp):
                 check_sizes(self.top_left_temp, self.bottom_right_temp)
 
                 self.top_left_permanent = self.top_left_temp.copy()
@@ -190,6 +226,6 @@ class ImageConditionUI(QtWidgets.QWidget):
         present_or_not = self.present_absent_combo.currentText().lower()[0]
         if top_left and bottom_right and image:
             check_sizes(top_left, bottom_right)
-            condition = ImageCondition(top_left, bottom_right, image)
+            condition = ImageCondition(top_left, bottom_right, image, present_or_not)
             self.main_app.add_condition(condition, present_or_not)
             self.main_app.switch_to_main_view()

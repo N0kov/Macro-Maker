@@ -1,4 +1,6 @@
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLineEdit, QLabel, QDialogButtonBox
+from PyQt6 import QtCore
+
 
 
 class RunCountPopup(QDialog):
@@ -11,23 +13,27 @@ class RunCountPopup(QDialog):
         self.setWindowTitle("Run count")
         self.setGeometry(550, 300, 270, 170)
 
-        self.layout = QVBoxLayout()
+        layout = QVBoxLayout()
 
         self.run_label = QLabel("Enter the amount of times the script should run")
-        self.layout.addWidget(self.run_label)
+        layout.addWidget(self.run_label)
 
         self.run_input = QLineEdit()
-        self.layout.addWidget(self.run_input)
+        layout.addWidget(self.run_input)
 
-        self.button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok
-                                           | QDialogButtonBox.StandardButton.Cancel, self)
-        self.button_box.accepted.connect(self.check_run_input_validity)
-        self.button_box.rejected.connect(self.reject)
-        self.layout.addWidget(self.button_box)
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel, self)
+        button_box.accepted.connect(self.check_run_input_validity)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
 
-        self.setLayout(self.layout)
-
+        self.setLayout(layout)
+        self.installEventFilter(self)
         self.runs = None
+
+    def eventFilter(self, source, event):
+        if event.type() == QtCore.QEvent.Type.KeyPress and event.key() == QtCore.Qt.Key.Key_Escape:
+            self.reject()
+        return super(RunCountPopup, self).eventFilter(source, event)
 
     def check_run_input_validity(self):
         """

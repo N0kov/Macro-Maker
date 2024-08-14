@@ -1,4 +1,5 @@
 from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
+from PyQt6 import QtCore
 from PyQt6.QtCore import Qt
 import inflect
 
@@ -20,38 +21,57 @@ class HotkeyPopup(QDialog):
         self.setWindowTitle("Hotkey")
         self.setGeometry(550, 300, 280, 180)
 
-        self.layout = QVBoxLayout()
+        layout = QVBoxLayout()
 
         self.recording = False
 
         self.label = QLabel("Press start to record a hotkey")
-        self.layout.addWidget(self.label)
+        layout.addWidget(self.label)
 
-        self.horizontal_layout = QHBoxLayout()
+        horizontal_layout = QHBoxLayout()
 
         self.start_button = QPushButton("Start", self)
         self.start_button.setFixedHeight(50)
         self.start_button.clicked.connect(self.start_recording)
-        self.horizontal_layout.addWidget(self.start_button)
+        horizontal_layout.addWidget(self.start_button)
 
         self.key_combination = all_hotkeys[hotkey]
+        self.old_hotkey = all_hotkeys[hotkey]
         self.bad_hotkeys = all_hotkeys[:hotkey] + [""] + all_hotkeys[hotkey+1:]
 
         self.hotkey_display = QLabel(str(self.key_combination))
         self.hotkey_display.setFixedHeight(50)
         self.hotkey_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.horizontal_layout.addWidget(self.hotkey_display)
+        horizontal_layout.addWidget(self.hotkey_display)
 
-        self.layout.addLayout(self.horizontal_layout)
-        self.layout.addSpacing(20)
+        layout.addLayout(horizontal_layout)
+        layout.addSpacing(20)
 
-        self.button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok |
-                                           QDialogButtonBox.StandardButton.Cancel, self)
-        self.button_box.accepted.connect(self.accept)
-        self.button_box.rejected.connect(self.reject)
-        self.layout.addWidget(self.button_box)
+        remove_hotkey = QPushButton("Remove Hotkey")
 
-        self.setLayout(self.layout)
+        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel, self)
+        button_box.addButton(remove_hotkey, QDialogButtonBox.ButtonRole.ActionRole)
+
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject_with_old_hotkey)
+        remove_hotkey.clicked.connect(self.close_without_hotkey)
+
+        layout.addWidget(button_box)
+
+        self.setLayout(layout)
+
+        self.installEventFilter(self)
+
+    def eventFilter(self, source, event):
+        """
+        Checks for if escape is pressed, and if so closes the popup
+        :param source: The class that sent the message
+        :param event: The key that was pressed in the form of a Qt KeyPress event
+        :return: Standard eventFilter operations if the key is not escape
+        """
+        if event.type() == QtCore.QEvent.Type.KeyPress and event.key() == QtCore.Qt.Key.Key_Escape:
+            self.reject()
+        return super(HotkeyPopup, self).eventFilter(source, event)
 
     def start_recording(self):
         """
@@ -96,7 +116,7 @@ class HotkeyPopup(QDialog):
         Processes the key the user hit. This live updates the box that shows the current hotkey. If the user presses
         a key the recording will be stopped, and stop_recording() called. This only accepts unique keys, and the keys
         are stored in a pynput readable form
-        :param event: A keystroke from the user
+        :param event: A keystroke from the user (Qt KeyPress)
         """
         if self.recording:
             key = event.key()
@@ -176,3 +196,11 @@ class HotkeyPopup(QDialog):
         if self.recording:
             self.recording = False
             self.stop_recording()
+
+    def reject_with_old_hotkey(self):
+        self.key_combination = self.old_hotkey
+        self.reject()
+
+    def close_without_hotkey(self):
+        self.key_combination = []
+        self.accept()

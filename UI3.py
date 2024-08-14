@@ -133,16 +133,20 @@ class MacroManagerMain(QMainWindow):
 
         conditions_frame = QFrame(self)
         conditions_frame.setFrameShape(QFrame.Shape.StyledPanel)
-        # conditions_frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         conditions_layout = QVBoxLayout(conditions_frame)
-        conditions_layout.setContentsMargins(0, 7, 0, 5)  # FIX THIS
+        conditions_layout.setContentsMargins(0, 7, 0, 8)
+        conditions_layout.setSpacing(0)
+
+        # For some reason these two labels are 7 pixels too far to the left versus the actions label, so they need
+        # to be moved. The same minor pixel movements go for the above context margins and the hbox for the + button
+        present_label_right_mover_hbox = QHBoxLayout()
+        absent_label_right_mover_hbox = QHBoxLayout()
+        present_label_right_mover_hbox.setContentsMargins(8, 0, 0, 0)
+        absent_label_right_mover_hbox.setContentsMargins(8, 0, 0, 0)
         present_label = QLabel("Present images")
         absent_label = QLabel("Absent images")
-        # conditions_layout.setSpacing(0)
-
-        # conditions_label = QLabel("Conditions")
-        # conditions_label.setFixedHeight(25)
-        # conditions_layout.addWidget(conditions_label)
+        present_label_right_mover_hbox.addWidget(present_label)
+        absent_label_right_mover_hbox.addWidget(absent_label)
 
         present_container = QVBoxLayout()
         absent_container = QVBoxLayout()
@@ -160,22 +164,20 @@ class MacroManagerMain(QMainWindow):
         a_grid_scroll_area.setWidget(a_grid_widget)
 
         self.image_dimensions = 150
-        spacing = 8
         for condition_type in (self.p_image_grid, self.a_image_grid):
-            # condition_type.columns = (p_grid_widget.width() - spacing*3) // self.image_dimensions
             condition_type.columns = 3
-            condition_type.setVerticalSpacing(spacing)
-            condition_type.setHorizontalSpacing(spacing)
+            condition_type.setVerticalSpacing(8)
+            condition_type.setHorizontalSpacing(8)
 
         present_container.addWidget(p_grid_scroll_area)
         absent_container.addWidget(a_grid_scroll_area)
 
         present_widget = QWidget()
-        conditions_layout.addWidget(present_label)
+        conditions_layout.addLayout(present_label_right_mover_hbox)
         present_widget.setLayout(present_container)
         conditions_layout.addWidget(present_widget)
 
-        conditions_layout.addWidget(absent_label)
+        conditions_layout.addLayout(absent_label_right_mover_hbox)
         absent_widget = QWidget()
         absent_widget.setLayout(absent_container)
         conditions_layout.addWidget(absent_widget)
@@ -185,8 +187,13 @@ class MacroManagerMain(QMainWindow):
         condition_button.setStyleSheet(plus_button_stylesheet)
         condition_button.clicked.connect(self.switch_to_add_condition_view)
 
-        conditions_layout.addWidget(condition_button,
-                                    alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignBottom)
+        hbox_to_move_plus_button_left = QHBoxLayout()
+        hbox_to_move_plus_button_left.setContentsMargins(0, 0, 10, 0)
+        hbox_to_move_plus_button_left.addWidget(condition_button,
+                                                alignment=Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignBottom)
+
+        conditions_layout.addLayout(hbox_to_move_plus_button_left)
+
         middle_layout.addWidget(conditions_frame)
 
         self.main_layout.addLayout(middle_layout)

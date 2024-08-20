@@ -8,6 +8,7 @@ import word2number.w2n as w2n
 
 from PyQt6.QtCore import QEventLoop
 from PyQt6.QtWidgets import *
+from PyQt6.QtGui import QAction
 
 from popups.HotkeyPopup import HotkeyPopup
 from conditions.ImageCondition import *
@@ -49,6 +50,7 @@ class MacroManagerMain(QMainWindow):
         self.main_view = QWidget()
         self.main_layout = QVBoxLayout(self.main_view)
 
+
         self.init_top_ui()
         self.init_action_condition_ui()
         self.update_condition_list()
@@ -58,6 +60,17 @@ class MacroManagerMain(QMainWindow):
         Initializes the top section of the UI where the buttons are for running, changing the run count, etc.
         """
         top_layout = QHBoxLayout()
+        menu = self.menuBar()
+
+        file_menu = menu.addMenu("&File")
+        save_button = QAction("Save", self)
+        load_button = QAction("Load", self)
+        save_button.triggered.connect(self.save_macros)
+        load_button.triggered.connect(self.load_macros)
+
+        file_menu.addAction(save_button)
+        file_menu.addAction(load_button)
+
         self.run_button = QPushButton("Run")
         self.run_button.clicked.connect(self.notify_action_thread)
 
@@ -77,16 +90,29 @@ class MacroManagerMain(QMainWindow):
         self.current_macro = 0  # Not strictly needed but writing self.macro_list.currentIndex() everywhere
         # is very clunky
 
-        save_button = QPushButton("Save")
-        save_button.clicked.connect(self.save_macros)
-        load_button = QPushButton("Load")
-        load_button.clicked.connect(self.load_macros)
+        self.run_button = QPushButton("Run")
+        self.run_button.clicked.connect(self.notify_action_thread)
+
+        self.run_options = QComboBox()
+        self.run_options.addItem("Run once")
+        self.run_options.addItem("Run infinitely")
+        self.run_options.addItem("Custom run count")
+        self.run_options.currentIndexChanged.connect(self.run_options_clicked)
+
+        self.set_hotkey_button = QPushButton("Set a hotkey (currently " + str(self.hotkeys[0]) + ")")
+        self.set_hotkey_button.clicked.connect(self.hotkey_clicked)
+
+        self.macro_list = QComboBox()
+        self.macro_list.addItem("Macro one")
+        self.macro_list.addItem("Create a new macro")
+        self.macro_list.currentIndexChanged.connect(self.switch_macro)
+        self.current_macro = 0  # Not strictly needed but writing self.macro_list.currentIndex() everywhere
+        # is very clunky
+
         top_layout.addWidget(self.run_button)
         top_layout.addWidget(self.run_options)
         top_layout.addWidget(self.set_hotkey_button)
         top_layout.addWidget(self.macro_list)
-        top_layout.addWidget(save_button)
-        top_layout.addWidget(load_button)
         self.main_layout.addLayout(top_layout)
 
     def init_action_condition_ui(self):
@@ -103,7 +129,7 @@ class MacroManagerMain(QMainWindow):
         self.action_list = QListWidget(self)  # action_list has custom logic
         self.action_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)  # Right click
         self.action_list.customContextMenuRequested.connect(self.right_click_actions_menu)
-        self.action_list.itemDoubleClicked.connect(self.call_edit_double_click)  # Double click = edit
+        self.action_list.itemDoubleClicked.connect(self.edit_item)  # Double click = edit
         self.action_list.setDragDropMode(QListWidget.DragDropMode.InternalMove)  # Dragging
         self.action_list.start_pos = None
         self.action_list.startDrag = self.startDrag
@@ -153,9 +179,9 @@ class MacroManagerMain(QMainWindow):
 
         p_grid_scroll_area = QScrollArea(self)
         p_grid_scroll_area.setWidgetResizable(True)
-        p_grid_widget = QWidget()
-        self.p_image_grid = QGridLayout(p_grid_widget)
-        p_grid_scroll_area.setWidget(p_grid_widget)
+        self.p_grid_widget = QWidget()
+        self.p_image_grid = QGridLayout(self.p_grid_widget)
+        p_grid_scroll_area.setWidget(self.p_grid_widget)
 
         a_grid_scroll_area = QScrollArea(self)
         a_grid_scroll_area.setWidgetResizable(True)
@@ -165,8 +191,7 @@ class MacroManagerMain(QMainWindow):
 
         self.image_dimensions = 150
         for condition_type in (self.p_image_grid, self.a_image_grid):
-            condition_type.columns = 3
-            condition_type.setVerticalSpacing(8)
+            condition_type.setVerticalSpacing(7)
             condition_type.setHorizontalSpacing(8)
 
         present_container.addWidget(p_grid_scroll_area)
@@ -212,7 +237,7 @@ class MacroManagerMain(QMainWindow):
             return
 
         if self.run_counts[macro] > 0:
-            [self.run_loop(macro) for _ in range(self.run_counts[self.current_macro]) if self.running_macro]
+            [self.run_loop(macro) for _ in range(self.run_counts[macro]) if self.running_macro]
 
         else:
             while self.running_macro:
@@ -303,15 +328,22 @@ class MacroManagerMain(QMainWindow):
                                        inflect.engine().number_to_words((macro_position + 1)))
             self.current_macro = macro_position
             self.macro_list.setCurrentIndex(macro_position)
+            self.macro_list.blockSignals(False)
 
             self.actions.append([])
             self.present_images.append([])
             self.absent_images.append([])
-            self.run_counts.append(self.run_counts[self.current_macro - 1])
+
+            self.run_options.blockSignals(True)
+            if self.run_options.count() == 4:
+                self.run_options.removeItem(1)
+            self.run_options.setCurrentIndex(0)
+            self.run_options.blockSignals(False)
+            self.run_counts.append(1)
+
             self.hotkeys.append("")
             listener.change_hotkey(self.hotkeys[self.current_macro], self.current_macro)
             self.set_hotkey_button.setText("Set a hotkey")
-            self.macro_list.blockSignals(False)
         else:
             self.current_macro = self.macro_list.currentIndex()
             self.set_run_options_from_run_counts()
@@ -416,37 +448,36 @@ class MacroManagerMain(QMainWindow):
                 with open(file_name, 'rb') as f:
                     functions = pickle.load(f)
 
-                if len(functions[0]) > 0:
-                    base_length = len(self.actions) + 1
+                for i in range(len(functions[0])):
+                    # Recovering the Condition QPixmaps (they're set to None, so they can be pickled)
+                    [present_image.recover_pixmap() for present_image in functions[1][i]]
+                    [absent_image.recover_pixmap() for absent_image in functions[2][i]]
 
-                    for i in range(len(functions[0])):
-                        # Recovering the Condition QPixmaps (they're set to None, so they can be pickled)
-                        [present_image.recover_pixmap() for present_image in functions[1][i]]
-                        [absent_image.recover_pixmap() for absent_image in functions[2][i]]
+                    self.macro_list.insertItem(len(self.actions), "Macro " +
+                                               inflect.engine().number_to_words(len(self.macro_list)))
+                    self.actions.append(functions[0][i])
+                    self.present_images.append(functions[1][i])
+                    self.absent_images.append(functions[2][i])
+                    self.run_counts.append(functions[4][i])
 
-                        self.macro_list.insertItem(len(self.actions), "Macro " +
-                                                   inflect.engine().number_to_words(i + base_length))
-                        self.actions.append(functions[0][i])
-                        self.present_images.append(functions[1][i])
-                        self.absent_images.append(functions[2][i])
-                        if functions[3][i] not in self.hotkeys:
-                            self.hotkeys.append(functions[3][i])
-                        else:
-                            self.hotkeys.append("")
-                        self.run_counts.append(functions[4][i])
-                        listener.change_hotkey(self.hotkeys[i], i)
-
-                    self.current_macro = len(self.macro_list) - 2
-                    self.macro_list.setCurrentIndex(len(self.macro_list) - 2)
-                    if self.hotkeys[self.current_macro] != "":
-                        self.set_hotkey_button.setText("Set a hotkey (currently " +
-                                                       str(self.hotkeys[self.current_macro]) + ")")
+                    if functions[3][i] not in self.hotkeys:
+                        self.hotkeys.append(functions[3][i])
                     else:
-                        self.set_hotkey_button.setText("Set a hotkey")
+                        self.hotkeys.append("")
+                    listener.change_hotkey(self.hotkeys[-1], (len(self.macro_list)))
 
-                    self.set_run_options_from_run_counts()
-                    self.update_condition_list()
-                    self.update_action_list()
+                self.current_macro = len(self.macro_list) - 2
+                self.macro_list.setCurrentIndex(len(self.macro_list) - 2)
+
+                if self.hotkeys[self.current_macro] != "":
+                    self.set_hotkey_button.setText("Set a hotkey (currently " +
+                                                   str(self.hotkeys[self.current_macro]) + ")")
+                else:
+                    self.set_hotkey_button.setText("Set a hotkey")
+
+                self.set_run_options_from_run_counts()
+                self.update_condition_list()
+                self.update_action_list()
 
         except (_pickle.UnpicklingError, EOFError):  # If you click on a non-pickle file / a corrupt pkl file
             pass
@@ -576,12 +607,14 @@ class MacroManagerMain(QMainWindow):
         self.clear_condition_display(self.p_image_grid)
         self.clear_condition_display(self.a_image_grid)
 
+        columns = int(self.p_grid_widget.width() // (self.image_dimensions * 17/15.7))
+
         for i in range(len(self.present_images[self.current_macro])):
-            image, row, col = self.create_image(i, self.present_images, self.p_image_grid)
+            image, row, col = self.create_image(i, self.present_images, columns)
             self.p_image_grid.addWidget(image, row, col)
 
         for i in range(len(self.absent_images[self.current_macro])):
-            label, row, col = self.create_image(i, self.absent_images, self.a_image_grid)
+            label, row, col = self.create_image(i, self.absent_images, columns)
             self.a_image_grid.addWidget(label, row, col)
 
     @staticmethod
@@ -596,14 +629,14 @@ class MacroManagerMain(QMainWindow):
             grid.takeAt(i)
             widget.deleteLater()
 
-    def create_image(self, i, image_list, condition_grid):
+    def create_image(self, i, image_list, columns):
         """
         Creates a ClickableLabel (a QLabel which can be right-clicked) based on the given image
         in the given image list which has the image inside of it, and returns said label, alongside
         the row and column that the label should be in
         :param i: The index of the image condition to get the pixmap from
         :param image_list: The image condition list
-        :param condition_grid: The grid to add the image too for formatting
+        :param columns: The number of columns of images there should be
         :return: A ClickableLabel with a QPixmap in it, and the row and col (ints) that the label should be in
         """
         pixmap = image_list[self.current_macro][i].image_pixmap
@@ -613,9 +646,13 @@ class MacroManagerMain(QMainWindow):
                                       Qt.TransformationMode.SmoothTransformation)
         label.setPixmap(scaled_pixmap)
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        row = i // condition_grid.columns
-        col = i % condition_grid.columns
+        row = i // columns
+        col = i % columns
         return label, row, col
+
+    def resizeEvent(self, event, **kwargs):
+        self.update_condition_list()
+        super().resizeEvent(event)
 
     def right_click_actions_menu(self, position):
         """
@@ -638,7 +675,7 @@ class MacroManagerMain(QMainWindow):
                 item = item.data(Qt.ItemDataRole.UserRole)
 
                 if selected_action == remove_item:
-                    if item in self.actions[self.current_macro]:
+                    if item in self.actions[self.current_macro]:  # Should always be True, but being safe
                         self.actions[self.current_macro].remove(item)
                         self.update_action_list()
 
@@ -647,12 +684,7 @@ class MacroManagerMain(QMainWindow):
                     self.update_action_list()
 
                 elif selected_action == edit_item:
-                    length_before_addition = len(self.actions[self.current_macro])
-                    self.call_ui_with_params(item)
-                    if len(self.actions[self.current_macro]) > length_before_addition:
-                        item_index = self.actions[self.current_macro].index(item)
-                        self.actions[self.current_macro][item_index] = self.actions[self.current_macro].pop()
-                        self.update_action_list()
+                    self.edit_item(item)
 
         sender.clearSelection()
 
@@ -686,6 +718,21 @@ class MacroManagerMain(QMainWindow):
                     self.update_condition_list()
                     break
 
+    def edit_item(self, item):
+        """
+        Opens the item's UI, and alters the chosen item to match what the user edited it to be
+        :param item: The item to be edited. Can be an Action, or a QListWidgetItem
+        """
+        if QListWidgetItem is type(item):
+            item = item.data(Qt.ItemDataRole.UserRole)
+
+        length_before_edit = len(self.actions[self.current_macro])
+        self.call_ui_with_params(item)
+        if len(self.actions[self.current_macro]) > length_before_edit:
+            item_index = self.actions[self.current_macro].index(item)
+            self.actions[self.current_macro][item_index] = self.actions[self.current_macro].pop()
+            self.update_action_list()
+
     def call_ui_with_params(self, item):
         """
         Calls the UI for the specified item, with the current item's data passed in so the user can edit it
@@ -709,15 +756,6 @@ class MacroManagerMain(QMainWindow):
 
         self.event_loop = QEventLoop()
         self.event_loop.exec()
-
-    def call_edit_double_click(self, item):
-        """
-        Gets the data from the passed in item widget, then sends it to call_ui_with_params - a direct .connect() won't
-        give it in the right form
-        :param item: The widget to be edited
-        """
-        item = item.data(Qt.ItemDataRole.UserRole)
-        self.call_ui_with_params(item)
 
     def start_hotkey_listener(self):
         """

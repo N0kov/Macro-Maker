@@ -10,8 +10,9 @@ from PyQt6.QtCore import QEventLoop
 from PyQt6.QtWidgets import *
 from PyQt6.QtGui import QAction
 
-from popups.HotkeyPopup import HotkeyPopup
 from conditions.ImageCondition import *
+from popups.HotkeyPopup import HotkeyPopup
+from popups.RemoveMacroPopup import RemoveMacroPopup
 from popups.RunCountPopup import RunCountPopup
 from actions import *
 from misc_utilities import listener
@@ -50,7 +51,6 @@ class MacroManagerMain(QMainWindow):
         self.main_view = QWidget()
         self.main_layout = QVBoxLayout(self.main_view)
 
-
         self.init_top_ui()
         self.init_action_condition_ui()
         self.update_condition_list()
@@ -85,7 +85,7 @@ class MacroManagerMain(QMainWindow):
 
         self.macro_list = QComboBox()
         self.macro_list.addItem("Macro one")
-        self.macro_list.addItem("Create a new macro")
+        self.macro_list.addItem("Create a macro")
         self.macro_list.currentIndexChanged.connect(self.switch_macro)
         self.current_macro = 0  # Not strictly needed but writing self.macro_list.currentIndex() everywhere
         # is very clunky
@@ -104,7 +104,8 @@ class MacroManagerMain(QMainWindow):
 
         self.macro_list = QComboBox()
         self.macro_list.addItem("Macro one")
-        self.macro_list.addItem("Create a new macro")
+        self.macro_list.addItem("Create a macro")
+
         self.macro_list.currentIndexChanged.connect(self.switch_macro)
         self.current_macro = 0  # Not strictly needed but writing self.macro_list.currentIndex() everywhere
         # is very clunky
@@ -316,14 +317,17 @@ class MacroManagerMain(QMainWindow):
             self.run_options.setCurrentIndex(1)
         self.run_options.blockSignals(False)
 
-    def switch_macro(self, option):
+    def switch_macro(self):
         """
-        Allows the user to switch to a different action / create a new one
-        :param option:
+        Allows the user to switch to a different action / create one / remove a macro. Macros are only removable when
+        there are at least two present
         """
-        if self.macro_list.itemText(option) == "Create a new macro":
+        if self.macro_list.currentText() == "Create a macro":
             self.macro_list.blockSignals(True)
-            macro_position = len(self.macro_list) - 1
+            if self.macro_list.itemText(self.macro_list.count() - 1) != "Remove a Macro":
+                self.macro_list.addItem("Remove a Macro")
+
+            macro_position = len(self.macro_list) - 2
             self.macro_list.insertItem(macro_position, "Macro " +
                                        inflect.engine().number_to_words((macro_position + 1)))
             self.current_macro = macro_position
@@ -339,11 +343,37 @@ class MacroManagerMain(QMainWindow):
                 self.run_options.removeItem(1)
             self.run_options.setCurrentIndex(0)
             self.run_options.blockSignals(False)
-            self.run_counts.append(1)
 
+            self.run_counts.append(1)
             self.hotkeys.append("")
             listener.change_hotkey(self.hotkeys[self.current_macro], self.current_macro)
             self.set_hotkey_button.setText("Set a hotkey")
+
+        elif self.macro_list.currentText() == "Remove a Macro":
+            current_macro = self.macro_list.currentIndex()
+
+            popup = RemoveMacroPopup(self.macro_list)
+            if popup.exec() == QDialog.DialogCode.Accepted:
+                self.macro_list.blockSignals(True)
+                index = popup.get_macro_to_remove()
+                self.macro_list.removeItem(index)
+                self.hotkeys.pop(index)
+                self.actions.pop(index)
+                self.present_images.pop(index)
+                self.absent_images.pop(index)
+                listener.remove_hotkey(index)
+
+                [self.macro_list.setItemText(i, ("Macro " + inflect.engine().number_to_words(i + 1)))
+                 for i in range(self.macro_list.count() - 2)]
+
+                if self.macro_list.count() == 3:
+                    self.macro_list.removeItem(2)  # Removing the remove macro option
+
+                self.macro_list.blockSignals(False)
+                self.macro_list.setCurrentIndex(0)  # This is effectively recalling this method and going to else
+            else:
+                self.macro_list.setCurrentIndex(current_macro)  # Same here
+
         else:
             self.current_macro = self.macro_list.currentIndex()
             self.set_run_options_from_run_counts()

@@ -2,7 +2,6 @@ from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLineEdit, QLabel, QDialogButt
 from PyQt6 import QtCore
 
 
-
 class RunCountPopup(QDialog):
     """
     The popup so the user can set a custom run count for the macro. Their input must be an integer greater than zero

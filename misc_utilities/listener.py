@@ -22,6 +22,11 @@ def change_hotkey(new_hotkey, hotkey_index):
         hotkey.append(convert_to_pynput(new_hotkey))
 
 
+def remove_hotkey(index):
+    global hotkey
+    hotkey.pop(index)
+
+
 def convert_to_pynput(keys):
     try:
         if len(keys) > 1:

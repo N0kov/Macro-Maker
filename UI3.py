@@ -13,6 +13,7 @@ from PyQt6.QtGui import QAction
 from conditions.ImageCondition import *
 from popups.HotkeyPopup import HotkeyPopup
 from popups.RemoveMacroPopup import RemoveMacroPopup
+from popups.RenameMacroPopup import RenameMacroPopup
 from popups.RunCountPopup import RunCountPopup
 from actions import *
 from misc_utilities import listener
@@ -86,6 +87,7 @@ class MacroManagerMain(QMainWindow):
         self.macro_list = QComboBox()
         self.macro_list.addItem("Macro one")
         self.macro_list.addItem("Create a macro")
+        self.macro_list.addItem("Rename a macro")
         self.macro_list.currentIndexChanged.connect(self.switch_macro)
         self.current_macro = 0  # Not strictly needed but writing self.macro_list.currentIndex() everywhere
         # is very clunky
@@ -101,14 +103,6 @@ class MacroManagerMain(QMainWindow):
 
         self.set_hotkey_button = QPushButton("Set a hotkey (currently " + str(self.hotkeys[0]) + ")")
         self.set_hotkey_button.clicked.connect(self.hotkey_clicked)
-
-        self.macro_list = QComboBox()
-        self.macro_list.addItem("Macro one")
-        self.macro_list.addItem("Create a macro")
-
-        self.macro_list.currentIndexChanged.connect(self.switch_macro)
-        self.current_macro = 0  # Not strictly needed but writing self.macro_list.currentIndex() everywhere
-        # is very clunky
 
         top_layout.addWidget(self.run_button)
         top_layout.addWidget(self.run_options)
@@ -284,7 +278,6 @@ class MacroManagerMain(QMainWindow):
     def set_run_count_from_run_options(self):
         """
         Sets the current macro's run count (in run_counts) to whatever item is selected from run_options
-        :return:
         """
         if self.run_options.currentText() == "Run once":
             self.run_counts[self.current_macro] = 1
@@ -298,9 +291,9 @@ class MacroManagerMain(QMainWindow):
         """
         Sets run_options to display the amount of times that the macro should run based on the current macro's run
         count (in run_counts)
-        :return:
         """
         self.run_options.blockSignals(True)
+
         if self.run_counts[self.current_macro] == -1:
             if self.run_options.count() == 4:
                 self.run_options.setCurrentIndex(2)
@@ -317,62 +310,25 @@ class MacroManagerMain(QMainWindow):
             self.run_options.setCurrentIndex(1)
         self.run_options.blockSignals(False)
 
-    def switch_macro(self):
+    def switch_macro(self):  # macro_list could be set up to be a file dropdown menu style
         """
         Allows the user to switch to a different action / create one / remove a macro. Macros are only removable when
         there are at least two present
         """
         if self.macro_list.currentText() == "Create a macro":
-            self.macro_list.blockSignals(True)
-            if self.macro_list.itemText(self.macro_list.count() - 1) != "Remove a Macro":
-                self.macro_list.addItem("Remove a Macro")
+            self.create_new_macro()
 
-            macro_position = len(self.macro_list) - 2
-            self.macro_list.insertItem(macro_position, "Macro " +
-                                       inflect.engine().number_to_words((macro_position + 1)))
-            self.current_macro = macro_position
-            self.macro_list.setCurrentIndex(macro_position)
-            self.macro_list.blockSignals(False)
+        elif self.macro_list.currentText() == "Remove a macro":
+            self.remove_macro()
 
-            self.actions.append([])
-            self.present_images.append([])
-            self.absent_images.append([])
-
-            self.run_options.blockSignals(True)
-            if self.run_options.count() == 4:
-                self.run_options.removeItem(1)
-            self.run_options.setCurrentIndex(0)
-            self.run_options.blockSignals(False)
-
-            self.run_counts.append(1)
-            self.hotkeys.append("")
-            listener.change_hotkey(self.hotkeys[self.current_macro], self.current_macro)
-            self.set_hotkey_button.setText("Set a hotkey")
-
-        elif self.macro_list.currentText() == "Remove a Macro":
-            current_macro = self.macro_list.currentIndex()
-
-            popup = RemoveMacroPopup(self.macro_list)
+        elif self.macro_list.currentText() == "Rename a macro":
+            popup = RenameMacroPopup(self.macro_list)
             if popup.exec() == QDialog.DialogCode.Accepted:
-                self.macro_list.blockSignals(True)
-                index = popup.get_macro_to_remove()
-                self.macro_list.removeItem(index)
-                self.hotkeys.pop(index)
-                self.actions.pop(index)
-                self.present_images.pop(index)
-                self.absent_images.pop(index)
-                listener.remove_hotkey(index)
-
-                [self.macro_list.setItemText(i, ("Macro " + inflect.engine().number_to_words(i + 1)))
-                 for i in range(self.macro_list.count() - 2)]
-
-                if self.macro_list.count() == 3:
-                    self.macro_list.removeItem(2)  # Removing the remove macro option
-
-                self.macro_list.blockSignals(False)
-                self.macro_list.setCurrentIndex(0)  # This is effectively recalling this method and going to else
+                self.macro_list.setItemText(popup.get_macro_choice(), popup.get_new_name())
+                self.current_macro = popup.get_macro_choice()
+                self.macro_list.setCurrentIndex(popup.get_macro_choice())
             else:
-                self.macro_list.setCurrentIndex(current_macro)  # Same here
+                self.macro_list.setCurrentIndex(0)
 
         else:
             self.current_macro = self.macro_list.currentIndex()
@@ -385,6 +341,77 @@ class MacroManagerMain(QMainWindow):
 
         self.update_action_list()
         self.update_condition_list()
+
+    def create_new_macro(self):
+        """
+        Adds a new macro to the macro list, and empty sets of all the data associated with a macro
+        """
+        self.macro_list.blockSignals(True)
+        if self.macro_list.itemText(self.macro_list.count() - 1) != "Remove a macro":
+            self.macro_list.addItem("Remove a macro")
+
+        macro_position = len(self.actions)
+        self.macro_list.insertItem(macro_position, "Macro " +
+                                   inflect.engine().number_to_words((macro_position + 1)))
+        self.current_macro = macro_position
+        self.macro_list.setCurrentIndex(macro_position)
+        self.macro_list.blockSignals(False)
+
+        self.actions.append([])
+        self.present_images.append([])
+        self.absent_images.append([])
+
+        self.run_options.blockSignals(True)
+        if self.run_options.count() == 4:
+            self.run_options.removeItem(1)
+        self.run_options.setCurrentIndex(0)
+        self.run_options.blockSignals(False)
+
+        self.run_counts.append(1)
+        self.hotkeys.append("")
+        listener.change_hotkey(self.hotkeys[self.current_macro], self.current_macro)
+        self.set_hotkey_button.setText("Set a hotkey")
+
+    def remove_macro(self):
+        """
+        Opens a popup that allows the user to pick a macro that they'd like to remove, then removes it and all of its fields
+        """
+        popup = RemoveMacroPopup(self.macro_list)
+        if popup.exec() == QDialog.DialogCode.Accepted:
+            self.macro_list.blockSignals(True)
+            index = popup.get_macro_to_remove()
+            self.macro_list.removeItem(index)
+            self.hotkeys.pop(index)
+            self.actions.pop(index)
+            self.present_images.pop(index)
+            self.absent_images.pop(index)
+            listener.remove_hotkey(index)
+
+            self.fix_macro_list_names()
+
+            self.macro_list.blockSignals(False)
+            self.macro_list.setCurrentIndex(0)  # This is effectively recalling this method and going to else
+        else:
+            self.macro_list.setCurrentIndex(0)  # Same here
+
+    def fix_macro_list_names(self):
+        """
+        Checks if the user has made a custom macro name, if so leaves it alone.
+        If not, it renames it to be Macro + its index.
+        Additionally, adds the remove macro option if there are at least two macros present, removes it otherwise
+        """
+        for i in range(len(self.actions)):
+            try:
+                w2n.word_to_num(self.macro_list.itemText(i).split()[1])  # Custom macro == word two isn't a number
+                self.macro_list.setItemText(i, ("Macro " + inflect.engine().number_to_words(i + 1)))
+            except (ValueError, IndexError):
+                pass
+
+        if self.macro_list.count() == 4:
+            self.macro_list.removeItem(3)
+        else:
+            if self.macro_list.itemText(self.macro_list.count() - 1) != "Remove a macro":
+                self.macro_list.addItem("Remove a macro")
 
     def hotkey_clicked(self):
         """
@@ -415,7 +442,6 @@ class MacroManagerMain(QMainWindow):
         itself. Then calls the standard startDrag to drag the item. This is used for the actions list
         :param supportedActions: The default actions that are supported by PyQt5's start drag definition, here because
             supportedActions is a default parameter for the def
-        :return:
         """
         self.action_list.start_pos = self.action_list.currentRow()
         self.action_list.dragged_item = self.action_list.currentItem()
@@ -452,15 +478,18 @@ class MacroManagerMain(QMainWindow):
             # The issue is that ImageConditions have a QPixmap inside of them (used to display the captured images
             # in the GUI). QPixmaps cannot be pickled, so this is setting all QPixmaps to None, and then recovering
             # them afterward
-            for i in range(len(self.macro_list) - 1):
+            for i in range(len(self.actions)):
                 [self.absent_images[i][j].clear_pixmap() for j in range(len(self.absent_images[i]))]
                 [self.present_images[i][j].clear_pixmap() for j in range(len(self.present_images[i]))]
 
-            with open(file_name, 'wb') as f:
-                pickle.dump([self.actions, self.present_images,
-                             self.absent_images, self.hotkeys, self.run_counts], f)
+            macro_name_list = []
+            [macro_name_list.append(self.macro_list.itemText(i)) for i in range(len(self.actions))]
 
-            for i in range(len(self.macro_list) - 1):
+            with open(file_name, 'wb') as f:
+                pickle.dump([self.actions, self.present_images, self.absent_images,
+                             self.hotkeys, self.run_counts, macro_name_list], f)
+
+            for i in range(len(self.actions)):
                 [self.absent_images[i][j].recover_pixmap() for j in range(len(self.absent_images[i]))]
                 [self.present_images[i][j].recover_pixmap() for j in range(len(self.present_images[i]))]
 
@@ -478,13 +507,14 @@ class MacroManagerMain(QMainWindow):
                 with open(file_name, 'rb') as f:
                     functions = pickle.load(f)
 
+                self.macro_list.blockSignals(True)
+
                 for i in range(len(functions[0])):
                     # Recovering the Condition QPixmaps (they're set to None, so they can be pickled)
                     [present_image.recover_pixmap() for present_image in functions[1][i]]
                     [absent_image.recover_pixmap() for absent_image in functions[2][i]]
 
-                    self.macro_list.insertItem(len(self.actions), "Macro " +
-                                               inflect.engine().number_to_words(len(self.macro_list)))
+                    self.macro_list.insertItem(len(self.actions), functions[5][i])
                     self.actions.append(functions[0][i])
                     self.present_images.append(functions[1][i])
                     self.absent_images.append(functions[2][i])
@@ -496,8 +526,9 @@ class MacroManagerMain(QMainWindow):
                         self.hotkeys.append("")
                     listener.change_hotkey(self.hotkeys[-1], (len(self.macro_list)))
 
-                self.current_macro = len(self.macro_list) - 2
-                self.macro_list.setCurrentIndex(len(self.macro_list) - 2)
+                self.current_macro = len(self.actions) - 1
+                self.macro_list.setCurrentIndex(self.current_macro)
+                self.fix_macro_list_names()
 
                 if self.hotkeys[self.current_macro] != "":
                     self.set_hotkey_button.setText("Set a hotkey (currently " +
@@ -508,6 +539,8 @@ class MacroManagerMain(QMainWindow):
                 self.set_run_options_from_run_counts()
                 self.update_condition_list()
                 self.update_action_list()
+
+                self.macro_list.blockSignals(False)
 
         except (_pickle.UnpicklingError, EOFError):  # If you click on a non-pickle file / a corrupt pkl file
             pass
@@ -543,7 +576,6 @@ class MacroManagerMain(QMainWindow):
         It switches to the requested action's UI in their Class, before returning to the prior def
         :param action_type: The option the user clicked on, that associates with an Action. These being click, wait,
             move, type and swipe
-        :return:
         """
         if action_type == "click":
             self.action_config_view = ClickXUI(self)
@@ -611,7 +643,6 @@ class MacroManagerMain(QMainWindow):
         the ImageCondition prompt. It then updates the condition list so that the user can see it
         :param condition: The ImageCondition object that the user made
         :param present_or_not: If the condition should go into the present_images or absent_images list
-        :return:
         """
         if present_or_not == "p":
             self.present_images[self.current_macro].append(condition)
@@ -790,7 +821,6 @@ class MacroManagerMain(QMainWindow):
     def start_hotkey_listener(self):
         """
         Starts the thread for the listener for the hotkey
-        :return:
         """
         self.listener_thread = threading.Thread(target=self.run_listener, daemon=True)
         self.listener_thread.start()

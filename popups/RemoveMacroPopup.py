@@ -16,8 +16,11 @@ class RemoveMacroPopup(QDialog):
         removal_label = QLabel("Pick the macro you would like to remove")
         layout.addWidget(removal_label)
 
+        i = 0
         self.macro_to_remove_box = QComboBox()
-        [self.macro_to_remove_box.addItem(macro_list.itemText(i)) for i in range(macro_list.count() - 2)]
+        while macro_list.itemText(i) != "Create a macro":
+            self.macro_to_remove_box.addItem(macro_list.itemText(i))
+            i += 1
         layout.addWidget(self.macro_to_remove_box)
 
         button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel, self)

@@ -33,14 +33,14 @@ class SwipeXY(Action):
                 ", " + str(self.end[1]) + ")")
 
 
-class SwipeXyUi(QtWidgets.QWidget):  # Using Ui not UI, as XYUI is unclear
+class SwipeXyUI(QtWidgets.QWidget):
     def __init__(self, main_app, swipe_xy_to_edit=None):
         """
         Establishes the main application frame, and calls init_ui to do the rest
         :param main_app: The application that this is being called from
         :param swipe_xy_to_edit: The passed in SwipeXY action to be edited. Defaults to None
         """
-        super(SwipeXyUi, self).__init__()
+        super(SwipeXyUI, self).__init__()
 
         if swipe_xy_to_edit is not None:
             self.initial_coordinates = swipe_xy_to_edit.start
@@ -101,7 +101,7 @@ class SwipeXyUi(QtWidgets.QWidget):  # Using Ui not UI, as XYUI is unclear
             self.final_coordinates = Controller().position
             self.final_coordinates_display.setText("Coordinates: " + str(self.final_coordinates))
             return True
-        return super(SwipeXyUi, self).eventFilter(source, event)
+        return super(SwipeXyUI, self).eventFilter(source, event)
 
     def save_action(self):
         initial_coordinates = self.initial_coordinates

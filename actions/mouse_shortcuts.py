@@ -1,5 +1,6 @@
 from pynput.mouse import Button, Controller
 from time import sleep
+from PyQt6.QtWidgets import QComboBox
 
 mouse = Controller()
 
@@ -14,6 +15,7 @@ try:
         ctypes.windll.shcore.SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE)
 except AttributeError:
     pass
+
 
 def move_between(pos1, pos2):
     """
@@ -42,3 +44,12 @@ def check_valid_input(coordinates):
         return [x, y]  # Forcing the correct format
     except (ValueError, TypeError):
         return [0, 0]  # In case bad data gets passed in
+
+
+def create_macro_list(macro_list):
+    i = 0
+    macro_to_remove_box = QComboBox()
+    while macro_list.itemText(i) != "Create a macro":
+        macro_to_remove_box.addItem(macro_list.itemText(i))
+        i += 1
+    return macro_to_remove_box

@@ -36,6 +36,7 @@ class MacroManagerMain(QMainWindow):
         listener.change_hotkey(self.hotkeys[0], 0)
         self.current_macro = 0
         self.macros_to_run = queue.Queue()
+        self.mutex = threading.Lock()
         self.current_running_macro = -1
 
         self.start_hotkey_listener()  # Thread stuff - checking for the hotkey to run your script
@@ -236,6 +237,8 @@ class MacroManagerMain(QMainWindow):
 
         else:
             while self.running_macro:
+                # print(threading.active_count())
+
                 self.run_loop(macro)
 
     def run_loop(self, macro):
@@ -374,20 +377,30 @@ class MacroManagerMain(QMainWindow):
 
     def remove_macro(self):
         """
-        Opens a popup that allows the user to pick a macro that they'd like to remove, then removes it and all of its fields
+        Opens a popup that allows the user to pick a macro that they'd like to remove,
+        then removes it and all of its fields
         """
         popup = RemoveMacroPopup(self.macro_list)
         if popup.exec() == QDialog.DialogCode.Accepted:
             self.macro_list.blockSignals(True)
-            index = popup.get_macro_to_remove()
-            self.macro_list.removeItem(index)
-            self.hotkeys.pop(index)
-            self.actions.pop(index)
-            self.present_images.pop(index)
-            self.absent_images.pop(index)
-            listener.remove_hotkey(index)
+            removal_index = popup.get_macro_to_remove()
+            self.macro_list.removeItem(removal_index)
+            self.hotkeys.pop(removal_index)
+            self.actions.pop(removal_index)
+            self.present_images.pop(removal_index)
+            self.absent_images.pop(removal_index)
+            listener.remove_hotkey(removal_index)
 
             self.fix_macro_list_names()
+            for i in range(len(self.actions)):
+                for j in range(len(self.actions[i])):
+                    if TriggerMacro is type(self.actions[i][j]):
+                        print("Removal index: " + str(removal_index))
+                        print("Macro index: " + str(self.actions[i][j].get_index()))
+                        if removal_index == self.actions[i][j].get_index():
+                            self.actions[i].pop(j)
+                        elif removal_index < self.actions[i][j].get_index():
+                            self.actions[i][j].update_fields((-1), self.macro_list.itemText(removal_index - 1))
 
             self.macro_list.blockSignals(False)
             self.macro_list.setCurrentIndex(0)  # This is effectively recalling this method and going to else
@@ -398,7 +411,7 @@ class MacroManagerMain(QMainWindow):
         """
         Checks if the user has made a custom macro name, if so leaves it alone.
         If not, it renames it to be Macro + its index.
-        Additionally, adds the remove macro option if there are at least two macros present, removes it otherwise
+        Additionally, adds the remove a macro option if there are at least two macros present, removes it otherwise
         """
         for i in range(len(self.actions)):
             try:
@@ -477,12 +490,13 @@ class MacroManagerMain(QMainWindow):
         if file_name:
             # The issue is that ImageConditions have a QPixmap inside of them (used to display the captured images
             # in the GUI). QPixmaps cannot be pickled, so this is setting all QPixmaps to None, and then recovering
-            # them afterward
+            # them afterward. MacroManagerMain objects also can't be pickled, and the reference is needed
+            # in TriggerMacro, so it also has to be removed
             for i in range(len(self.actions)):
                 [self.absent_images[i][j].clear_pixmap() for j in range(len(self.absent_images[i]))]
                 [self.present_images[i][j].clear_pixmap() for j in range(len(self.present_images[i]))]
 
-            macro_name_list = []
+            macro_name_list = []  # QComboBoxes can't be pickled either
             [macro_name_list.append(self.macro_list.itemText(i)) for i in range(len(self.actions))]
 
             with open(file_name, 'wb') as f:
@@ -508,6 +522,7 @@ class MacroManagerMain(QMainWindow):
                     functions = pickle.load(f)
 
                 self.macro_list.blockSignals(True)
+                base_length = len(self.actions)
 
                 for i in range(len(functions[0])):
                     # Recovering the Condition QPixmaps (they're set to None, so they can be pickled)
@@ -529,6 +544,10 @@ class MacroManagerMain(QMainWindow):
                 self.current_macro = len(self.actions) - 1
                 self.macro_list.setCurrentIndex(self.current_macro)
                 self.fix_macro_list_names()
+
+                for i in range(base_length, len(self.actions)):  # The names need to be fixed before this can run
+                    [action.update_fields(base_length, self.macro_list.itemText(i))
+                     for action in self.actions[i] if isinstance(action, TriggerMacro)]
 
                 if self.hotkeys[self.current_macro] != "":
                     self.set_hotkey_button.setText("Set a hotkey (currently " +
@@ -558,6 +577,9 @@ class MacroManagerMain(QMainWindow):
         action_layout.addWidget(action_label)
 
         actions = ["Click", "Move", "Swipe", "Type", "Wait"]
+        if len(self.actions) > 1:
+            actions.append("Trigger macro")
+
         for action in actions:
             button = QPushButton(action)
             button.clicked.connect(lambda _, a=action: self.show_action_config_view(a.lower()))
@@ -586,7 +608,9 @@ class MacroManagerMain(QMainWindow):
         elif action_type == "type":
             self.action_config_view = TypeTextUI(self)
         elif action_type == "swipe":
-            self.action_config_view = SwipeXyUi(self)
+            self.action_config_view = SwipeXyUI(self)
+        elif action_type == "trigger macro":
+            self.action_config_view = TriggerMacroUI(self, self.macro_list)
         else:  # In case something weird gets called that isn't one of the above
             return
 
@@ -805,11 +829,13 @@ class MacroManagerMain(QMainWindow):
         elif isinstance(item, MouseTo):
             edit_view = MouseToUI(self, item)
         elif isinstance(item, SwipeXY):
-            edit_view = SwipeXyUi(self, item)
+            edit_view = SwipeXyUI(self, item)
         elif isinstance(item, TypeText):
             edit_view = TypeTextUI(self, item)
         elif isinstance(item, Wait):
             edit_view = WaitUI(self, item)
+        elif isinstance(item, TriggerMacro):
+            edit_view = TriggerMacroUI(self, self.macro_list, item)
         else:
             return
         self.central_widget.addWidget(edit_view)
@@ -834,23 +860,6 @@ class MacroManagerMain(QMainWindow):
         """Starts the listener, runs via the listener file. Passes in the on_hotkey_pressed definition"""
         listener.start_listener(self.on_hotkey_pressed)
 
-    def on_hotkey_pressed(self, index):
-        """
-        Logic for when the hotkey is pressed. Triggers the macro thread when the macro isn't running, kills it
-        when it is. It does this via notifying the macro thread
-        """
-        if not self.running_macro:
-            self.macros_to_run.put(index)
-            self.notify_action_thread(True)
-        else:
-            if self.current_running_macro != index:
-                self.macros_to_run.put(index)
-            else:
-                self.run_button.setText("Stopping")
-            self.running_macro = False
-        if not self.listener_thread.is_alive():
-            self.run_listener()
-
     def run_macro_thread(self):
         """
         Thread for running the macro. Waits for a notification from on_hotkey_pressed, and runs it once notified, before
@@ -865,22 +874,50 @@ class MacroManagerMain(QMainWindow):
                 # substantiate it if new, then sets a class var (current_running_macro) to record which macro is running
                 #  (to know when a hotkey is pressed if the macro should be added to the queue or not),
                 #  and finally runs it
+                print(threading.active_count())
                 self.running_macro = True
                 self.current_running_macro = self.macros_to_run.get()
                 self.run_macro(self.current_running_macro)
 
             self.run_button.setText("Run")
+            print()
             self.running_macro = False
+
+    def on_hotkey_pressed(self, index):
+        """
+        Logic for when the hotkey is pressed. Triggers the macro thread when the macro isn't running, kills it
+        when it is. It does this via notifying the macro thread
+        :param index: The index of the macro to run
+        """
+        if not self.running_macro:
+            if self.macros_to_run.empty():
+                with self.mutex:
+                    # self.macros_to_run.put(self.current_macro)
+                    self.macros_to_run.put(index)
+                # self.notify_action_thread(True)
+                with self.run_action_condition:
+                    self.run_action_condition.notify()
+
+        else:
+            if self.current_running_macro != index:
+                self.macros_to_run.put(index)
+            else:
+                self.run_button.setText("Stopping")
+            self.running_macro = False
+        if not self.listener_thread.is_alive():
+            self.run_listener()
 
     def notify_action_thread(self, from_hotkey):
         """
         Notifies run_macro_thread to run, works via the hotkey or a press from the Run button. Also sets the
         run button to say Stop, which can be clicked to stop the macro (will display Stopping while stopping)
         """
-        if from_hotkey or self.run_button.text() == "Run":
+        if not from_hotkey and self.run_button.text() == "Run":
             if self.macros_to_run.empty():
-                self.macros_to_run.put(self.current_macro)
+                with self.mutex:
+                    self.macros_to_run.put(self.current_macro)
             self.run_button.setText("Stop")
+
         elif not from_hotkey and self.run_button.text() == "Stop":
             self.macros_to_run.empty()
             self.run_button.setText("Stopping")
@@ -888,7 +925,6 @@ class MacroManagerMain(QMainWindow):
 
         with self.run_action_condition:
             self.run_action_condition.notify()
-
 
 def main():
     app = QApplication(sys.argv)

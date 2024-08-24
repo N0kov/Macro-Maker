@@ -237,8 +237,6 @@ class MacroManagerMain(QMainWindow):
 
         else:
             while self.running_macro:
-                # print(threading.active_count())
-
                 self.run_loop(macro)
 
     def run_loop(self, macro):
@@ -395,8 +393,6 @@ class MacroManagerMain(QMainWindow):
             for i in range(len(self.actions)):
                 for j in range(len(self.actions[i])):
                     if TriggerMacro is type(self.actions[i][j]):
-                        print("Removal index: " + str(removal_index))
-                        print("Macro index: " + str(self.actions[i][j].get_index()))
                         if removal_index == self.actions[i][j].get_index():
                             self.actions[i].pop(j)
                         elif removal_index < self.actions[i][j].get_index():
@@ -576,7 +572,7 @@ class MacroManagerMain(QMainWindow):
         action_label = QLabel("Select an Action Type")
         action_layout.addWidget(action_label)
 
-        actions = ["Click", "Move", "Swipe", "Type", "Wait"]
+        actions = ["Click", "Move", "Swipe", "Type", "Wait", "Record position"]
         if len(self.actions) > 1:
             actions.append("Trigger macro")
 
@@ -609,6 +605,8 @@ class MacroManagerMain(QMainWindow):
             self.action_config_view = TypeTextUI(self)
         elif action_type == "swipe":
             self.action_config_view = SwipeXyUI(self)
+        elif action_type == "record position":
+            self.action_config_view = RecordMousePositionUI(self, self.actions[self.current_macro])
         elif action_type == "trigger macro":
             self.action_config_view = TriggerMacroUI(self, self.macro_list)
         else:  # In case something weird gets called that isn't one of the above
@@ -692,7 +690,7 @@ class MacroManagerMain(QMainWindow):
         self.clear_condition_display(self.p_image_grid)
         self.clear_condition_display(self.a_image_grid)
 
-        columns = int(self.p_grid_widget.width() // (self.image_dimensions * 17/15.7))
+        columns = int(self.p_grid_widget.width() // (self.image_dimensions * 17 / 15.7))
 
         for i in range(len(self.present_images[self.current_macro])):
             image, row, col = self.create_image(i, self.present_images, columns)
@@ -874,13 +872,13 @@ class MacroManagerMain(QMainWindow):
                 # substantiate it if new, then sets a class var (current_running_macro) to record which macro is running
                 #  (to know when a hotkey is pressed if the macro should be added to the queue or not),
                 #  and finally runs it
-                print(threading.active_count())
                 self.running_macro = True
                 self.current_running_macro = self.macros_to_run.get()
                 self.run_macro(self.current_running_macro)
 
             self.run_button.setText("Run")
-            print()
+            [action.clear_coordinates() for i in range(len(self.actions)) for action in self.actions[i]
+             if type(action) is RecordMousePosition]
             self.running_macro = False
 
     def on_hotkey_pressed(self, index):
@@ -925,6 +923,7 @@ class MacroManagerMain(QMainWindow):
 
         with self.run_action_condition:
             self.run_action_condition.notify()
+
 
 def main():
     app = QApplication(sys.argv)

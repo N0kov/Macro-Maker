@@ -56,33 +56,33 @@ class SwipeXyUI(QtWidgets.QWidget):
         Initializes the UI elements and installs a custom event filter to listen for keystrokes
         :param swipe_xy_to_edit: The passed in SwipeXY action to be edited. Defaults to None
         """
-        self.layout = QVBoxLayout(self)
-        self.label = QLabel("Make a new swipe action")
-        self.layout.addWidget(self.label)
+        layout = QVBoxLayout(self)
+        label = QLabel("Make a new swipe action")
+        layout.addWidget(label)
 
-        self.initial_coordinates_label = QLabel("Press shift to set the initial coordinates to where your mouse is.")
-        self.layout.addWidget(self.initial_coordinates_label)
+        initial_coordinates_label = QLabel("Press shift to set the initial coordinates to where your mouse is.")
+        layout.addWidget(initial_coordinates_label)
 
         self.initial_coordinates_display = QLabel("Initial coordinates: Not set")
-        self.layout.addWidget(self.initial_coordinates_display)
+        layout.addWidget(self.initial_coordinates_display)
 
-        self.final_coordinates_label = QLabel("Press control to set the final coordinates to where your mouse is.")
-        self.layout.addWidget(self.final_coordinates_label)
+        final_coordinates_label = QLabel("Press control to set the final coordinates to where your mouse is.")
+        layout.addWidget(final_coordinates_label)
 
         self.final_coordinates_display = QLabel("Final coordinates: Not set")
-        self.layout.addWidget(self.final_coordinates_display)
+        layout.addWidget(self.final_coordinates_display)
 
         if swipe_xy_to_edit is not None:
             self.initial_coordinates_display.setText("Coordinates: " + str(self.initial_coordinates))
             self.final_coordinates_display.setText("Coordinates: " + str(self.final_coordinates))
 
-        self.save_button = QPushButton("Save")
-        self.save_button.clicked.connect(self.save_action)
-        self.layout.addWidget(self.save_button)
+        save_button = QPushButton("Save")
+        save_button.clicked.connect(self.save_action)
+        layout.addWidget(save_button)
 
-        self.back_button = QPushButton("Back")
-        self.back_button.clicked.connect(self.main_app.switch_to_main_view)
-        self.layout.addWidget(self.back_button)
+        back_button = QPushButton("Back")
+        back_button.clicked.connect(self.main_app.switch_to_main_view)
+        layout.addWidget(back_button)
 
         self.installEventFilter(self)
 

@@ -124,36 +124,34 @@ class TypeTextUI(QtWidgets.QWidget):
         Initializes the UI elements
         :param type_text_to_edit: The passed in SwipeXY action to be edited. Defaults to None
         """
-        self.layout = QVBoxLayout(self)
+        layout = QVBoxLayout(self)
 
         self.label = QLabel("Create a phrase to type")
-        self.layout.addWidget(self.label)
+        layout.addWidget(self.label)
 
-        self.instruction_label = QLabel("Input the phrase below. Use + to indicate a command "
+        instruction_label = QLabel("Input the phrase below. Use + to indicate a command "
                                         "(e.g. ctrl+v or tab+)<br><br>"
                                         "Use \\+ if you want to input +<br><br>"
                                         "You can see all valid commands "
                                         "<a href='https://pynput.readthedocs.io/en/latest/_modules/pynput"
                                         "/keyboard/_base.html#Key'>here</a>")
 
-        self.instruction_label.setOpenExternalLinks(True)
-        self.layout.addWidget(self.instruction_label)
-
-        self.layout.addWidget(self.instruction_label)
+        instruction_label.setOpenExternalLinks(True)
+        layout.addWidget(instruction_label)
 
         self.text_input = QLineEdit()
-        self.layout.addWidget(self.text_input)
+        layout.addWidget(self.text_input)
 
         if type_text_to_edit is not None:
             self.text_input.setText(''.join([str(item) for item in type_text_to_edit.series]))
 
-        self.save_button = QPushButton("Save")
-        self.save_button.clicked.connect(lambda: self.save_action())
-        self.layout.addWidget(self.save_button)
+        save_button = QPushButton("Save")
+        save_button.clicked.connect(self.save_action)
+        layout.addWidget(save_button)
 
-        self.back_button = QPushButton("Back")
-        self.back_button.clicked.connect(lambda: self.main_app.switch_to_main_view())
-        self.layout.addWidget(self.back_button)
+        back_button = QPushButton("Back")
+        back_button.clicked.connect(self.main_app.switch_to_main_view)
+        layout.addWidget(back_button)
 
         self.wait_time = None
 

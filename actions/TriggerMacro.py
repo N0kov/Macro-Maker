@@ -35,7 +35,6 @@ class TriggerMacroUI(QtWidgets.QWidget):
         """
         super(TriggerMacroUI, self).__init__()
         self.main_app = main_app
-        # self.callback = callback
         self.init_ui(macro_list, current_choice)
 
     def init_ui(self, macro_list, current_choice):
@@ -44,11 +43,11 @@ class TriggerMacroUI(QtWidgets.QWidget):
         """
         layout = QVBoxLayout(self)
 
-        self.title = QLabel("Choose a macro to trigger")
-        layout.addWidget(self.title)
+        title = QLabel("Choose a macro to trigger")
+        layout.addWidget(title)
 
-        self.prompt = QLabel("Pick the macro:")
-        layout.addWidget(self.prompt)
+        prompt = QLabel("Pick the macro:")
+        layout.addWidget(prompt)
 
         self.macro_box = create_macro_list(macro_list)
         layout.addWidget(self.macro_box)

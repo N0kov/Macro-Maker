@@ -29,7 +29,8 @@ class ClickX(Action):
         :param coordinates: The x, y coordinates to be clicked at. List or tuple
         :param click_type: String, the type of click. Defaults to left, but can be for right or middle
         """
-        self.coordinates = check_valid_input(coordinates)
+        # self.coordinates = check_valid_input(coordinates)
+        self.coordinates = coordinates
 
         self.click = "Left"  # The default for if the click isn't passed in correctly
         self.click_type = Button.left
@@ -43,15 +44,20 @@ class ClickX(Action):
     def run(self):
         """
         Moves the mouse to the specified coordinates in self.coordinates and performs the specified click in click_type
+        Only clicks if coordinates is none
         """
-        Controller().position = (self.coordinates[0], self.coordinates[1])
+        if self.coordinates:
+            Controller().position = (self.coordinates[0], self.coordinates[1])
         Controller().click(self.click_type, 1)
 
     def __str__(self):
         """
         Returns a string representation of the ClickX object in the form "[click type] click at (x, y)"
         """
-        return self.click + " click at (" + str(self.coordinates[0]) + ", " + str(self.coordinates[1]) + ")"
+        if self.coordinates:
+            return self.click + " click at (" + str(self.coordinates[0]) + ", " + str(self.coordinates[1]) + ")"
+        else:
+            return self.click + " clicking"
 
 
 class ClickXUI(QtWidgets.QWidget):
@@ -78,33 +84,35 @@ class ClickXUI(QtWidgets.QWidget):
         Initializes the UI elements and installs a custom event filter to listen for keystrokes
         :param click_x_to_edit: The passed in Wait action to be edited. Defaults to None
         """
-        self.layout = QVBoxLayout(self)
+        layout = QVBoxLayout(self)
         self.label = QLabel("Make a new click action")
-        self.layout.addWidget(self.label)
+        layout.addWidget(self.label)
 
         self.click_type_label = QLabel("Select Click Type:")
-        self.layout.addWidget(self.click_type_label)
+        layout.addWidget(self.click_type_label)
         self.click_type_combo = QComboBox()
         self.click_type_combo.addItems(["Left", "Right", "Middle"])
-        self.layout.addWidget(self.click_type_combo)
+        layout.addWidget(self.click_type_combo)
 
-        self.coordinates_label = QLabel("Press shift to set coordinates to where your mouse is.")
-        self.layout.addWidget(self.coordinates_label)
+        self.coordinates_label = QLabel("Press shift to set coordinates to where your mouse is."
+                                        "\n\nDon't record a position if you "
+                                        "want the mouse to click where it already is.")
+        layout.addWidget(self.coordinates_label)
 
         self.coordinates_display = QLabel("Coordinates: Not set")
-        self.layout.addWidget(self.coordinates_display)
+        layout.addWidget(self.coordinates_display)
 
         if click_x_to_edit is not None:
             self.click_type_combo.setCurrentIndex(self.click_type_combo.findText(click_x_to_edit.click))
             self.coordinates_display.setText("Coordinates: " + str(self.coordinates))
 
-        self.save_button = QPushButton("Save")
-        self.save_button.clicked.connect(self.save_action)
-        self.layout.addWidget(self.save_button)
+        save_button = QPushButton("Save")
+        save_button.clicked.connect(self.save_action)
+        layout.addWidget(save_button)
 
-        self.back_button = QPushButton("Back")
-        self.back_button.clicked.connect(self.main_app.switch_to_main_view)
-        self.layout.addWidget(self.back_button)
+        back_button = QPushButton("Back")
+        back_button.clicked.connect(self.main_app.switch_to_main_view)
+        layout.addWidget(back_button)
 
         self.installEventFilter(self)
 
@@ -115,7 +123,7 @@ class ClickXUI(QtWidgets.QWidget):
         :param source: The source of the event - not used, only present as it is a set field
         :param event: The thing that happened to the UI
         :return: True if one of the custom events has been fulfilled. Otherwise, defaults to the default eventFilter
-            PyQt5 logic
+            PyQt6 logic
         """
         if event.type() == QtCore.QEvent.Type.KeyPress and event.key() == QtCore.Qt.Key.Key_Shift:
             self.set_coordinates()
@@ -131,14 +139,13 @@ class ClickXUI(QtWidgets.QWidget):
 
     def save_action(self):
         """
-        Checks that the user has set coordinates. If so, it creates a ClickX object with the coordinates and
-            click data, sending it to UI3's action list
-        :return: A ClickX object with the coordinates and click data to UI3's action list. Returns nothing if
-            coordinates do not exist
+        Creates a ClickX object and returns it to the main app. If no coordinates have been specified, the mouse
+        won't move when the action is run
+        :return: A ClickX object with the coordinates and click data to UI3's action list.
         """
         click_type = self.click_type_combo.currentText().lower()[0]
-        coordinates = self.coordinates
-        if coordinates:
-            action = ClickX(coordinates, click_type)
-            self.main_app.add_action(action)
+        # coordinates = self.coordinates
+        # if coordinates:
+        action = ClickX(self.coordinates, click_type)
+        self.main_app.add_action(action)
         self.main_app.switch_to_main_view()

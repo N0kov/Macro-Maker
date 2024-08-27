@@ -18,7 +18,7 @@ class HotkeyPopup(QDialog):
         """
         super().__init__(parent)
 
-        self.setWindowTitle("Hotkey")
+        self.setWindowTitle("Set a Hotkey")
         self.setGeometry(550, 300, 280, 180)
 
         layout = QVBoxLayout()

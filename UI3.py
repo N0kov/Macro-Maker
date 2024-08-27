@@ -2,15 +2,21 @@ import _pickle
 import pickle
 import sys
 import threading
+from typing import List, Any
+
 import inflect
 import queue
 import word2number.w2n as w2n
 
 from PyQt6.QtCore import QEventLoop
 from PyQt6.QtWidgets import *
+from PyQt6.QtGui import QAction
 
-from popups.HotkeyPopup import HotkeyPopup
 from conditions.ImageCondition import *
+from popups.AdvancedActionsPopup import AdvancedActions
+from popups.HotkeyPopup import HotkeyPopup
+from popups.RemoveMacroPopup import RemoveMacroPopup
+from popups.RenameMacroPopup import RenameMacroPopup
 from popups.RunCountPopup import RunCountPopup
 from actions import *
 from misc_utilities import listener
@@ -22,17 +28,18 @@ class MacroManagerMain(QMainWindow):
     The main application for Macro-Maker. This manages the main GUI, holds the action and condition classes, allows
     scripts to run and call on the other classes
     """
-
     def __init__(self):
         super().__init__()
         self.actions = [[]]
         self.present_images = [[]]
         self.absent_images = [[]]
+        self.advanced_actions = [[]]
         self.hotkeys = ["f8"]
         self.run_counts = [1]
         listener.change_hotkey(self.hotkeys[0], 0)
         self.current_macro = 0
         self.macros_to_run = queue.Queue()
+        self.mutex = threading.Lock()
         self.current_running_macro = -1
 
         self.start_hotkey_listener()  # Thread stuff - checking for the hotkey to run your script
@@ -58,6 +65,17 @@ class MacroManagerMain(QMainWindow):
         Initializes the top section of the UI where the buttons are for running, changing the run count, etc.
         """
         top_layout = QHBoxLayout()
+        menu = self.menuBar()
+
+        file_menu = menu.addMenu("&File")
+        save_button = QAction("Save", self)
+        load_button = QAction("Load", self)
+        save_button.triggered.connect(self.save_macros)
+        load_button.triggered.connect(self.load_macros)
+
+        file_menu.addAction(save_button)
+        file_menu.addAction(load_button)
+
         self.run_button = QPushButton("Run")
         self.run_button.clicked.connect(self.notify_action_thread)
 
@@ -72,21 +90,20 @@ class MacroManagerMain(QMainWindow):
 
         self.macro_list = QComboBox()
         self.macro_list.addItem("Macro one")
-        self.macro_list.addItem("Create a new macro")
+        self.macro_list.addItem("Create a macro")
+        self.macro_list.addItem("Rename a macro")
         self.macro_list.currentIndexChanged.connect(self.switch_macro)
         self.current_macro = 0  # Not strictly needed but writing self.macro_list.currentIndex() everywhere
         # is very clunky
 
-        save_button = QPushButton("Save")
-        save_button.clicked.connect(self.save_macros)
-        load_button = QPushButton("Load")
-        load_button.clicked.connect(self.load_macros)
+        meta_modifier_button = QPushButton("Set meta modifiers")
+        meta_modifier_button.clicked.connect(self.switch_to_meta_modifier_view)
+
         top_layout.addWidget(self.run_button)
         top_layout.addWidget(self.run_options)
         top_layout.addWidget(self.set_hotkey_button)
         top_layout.addWidget(self.macro_list)
-        top_layout.addWidget(save_button)
-        top_layout.addWidget(load_button)
+        top_layout.addWidget(meta_modifier_button)
         self.main_layout.addLayout(top_layout)
 
     def init_action_condition_ui(self):
@@ -103,7 +120,7 @@ class MacroManagerMain(QMainWindow):
         self.action_list = QListWidget(self)  # action_list has custom logic
         self.action_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)  # Right click
         self.action_list.customContextMenuRequested.connect(self.right_click_actions_menu)
-        self.action_list.itemDoubleClicked.connect(self.call_edit_double_click)  # Double click = edit
+        self.action_list.itemDoubleClicked.connect(self.edit_item)  # Double click = edit
         self.action_list.setDragDropMode(QListWidget.DragDropMode.InternalMove)  # Dragging
         self.action_list.start_pos = None
         self.action_list.startDrag = self.startDrag
@@ -111,6 +128,15 @@ class MacroManagerMain(QMainWindow):
 
         actions_layout.addWidget(actions_label)
         actions_layout.addWidget(self.action_list)
+
+        meta_modifier_label = QLabel("Meta modifiers")
+        actions_layout.addWidget(meta_modifier_label)
+        meta_modifier_box = QVBoxLayout()
+        self.meta_modifier_context_label = QLabel("No modifiers set")
+        actions_layout.addWidget(self.meta_modifier_context_label)
+        self.advanced_action_list = QListWidget(self)
+        meta_modifier_box.addWidget(self.advanced_action_list)
+        actions_layout.addLayout(meta_modifier_box)
 
         plus_button_stylesheet = ("""
         QPushButton {
@@ -125,7 +151,7 @@ class MacroManagerMain(QMainWindow):
         add_action_button = QPushButton("+")
         add_action_button.setFixedSize(40, 40)
         add_action_button.setStyleSheet(plus_button_stylesheet)
-        add_action_button.clicked.connect(self.switch_to_add_action_view)
+        add_action_button.clicked.connect(lambda: self.switch_to_add_action_view("main_app"))
         actions_layout.addWidget(add_action_button, alignment=QtCore.Qt.AlignmentFlag.AlignRight |
                                                               QtCore.Qt.AlignmentFlag.AlignBottom)
 
@@ -153,9 +179,9 @@ class MacroManagerMain(QMainWindow):
 
         p_grid_scroll_area = QScrollArea(self)
         p_grid_scroll_area.setWidgetResizable(True)
-        p_grid_widget = QWidget()
-        self.p_image_grid = QGridLayout(p_grid_widget)
-        p_grid_scroll_area.setWidget(p_grid_widget)
+        self.p_grid_widget = QWidget()
+        self.p_image_grid = QGridLayout(self.p_grid_widget)
+        p_grid_scroll_area.setWidget(self.p_grid_widget)
 
         a_grid_scroll_area = QScrollArea(self)
         a_grid_scroll_area.setWidgetResizable(True)
@@ -165,8 +191,7 @@ class MacroManagerMain(QMainWindow):
 
         self.image_dimensions = 150
         for condition_type in (self.p_image_grid, self.a_image_grid):
-            condition_type.columns = 3
-            condition_type.setVerticalSpacing(8)
+            condition_type.setVerticalSpacing(7)
             condition_type.setHorizontalSpacing(8)
 
         present_container.addWidget(p_grid_scroll_area)
@@ -212,11 +237,24 @@ class MacroManagerMain(QMainWindow):
             return
 
         if self.run_counts[macro] > 0:
-            [self.run_loop(macro) for _ in range(self.run_counts[self.current_macro]) if self.running_macro]
+            [self.run_loop(macro) for _ in range(self.run_counts[macro]) if self.running_macro]
 
         else:
             while self.running_macro:
                 self.run_loop(macro)
+
+    def advanced_run_macro(self, macro):
+        print()
+        if self.advanced_actions[macro][0] > 0:
+            [self.run_loop(macro) for _ in range(self.advanced_actions[macro][0]) if self.running_macro]
+            [action.run() for action in self.advanced_actions[macro][1] if self.running_macro]
+        else:
+            while True:
+                if self.check_images_advanced(macro):
+                    [action.run() for action in self.actions[macro] if self.running_macro]
+                else:
+                    [action.run() for action in self.advanced_actions[macro][1] if self.running_macro]
+                    break
 
     def run_loop(self, macro):
         """
@@ -225,8 +263,7 @@ class MacroManagerMain(QMainWindow):
         :param macro: The index of the macro to run
         """
         self.check_images(macro)
-        if self.running_macro:
-            [action.run() for action in self.actions[macro] if self.running_macro]
+        [action.run() for action in self.actions[macro] if self.running_macro]
 
     def check_images(self, macro):
         """
@@ -238,6 +275,13 @@ class MacroManagerMain(QMainWindow):
             if all(image.run() for image in self.present_images[macro]) and all(
                     not image.run() for image in self.absent_images[macro]):
                 return
+
+    def check_images_advanced(self, macro):
+        for _ in range(-self.advanced_actions[macro][0]):
+            if all(image.run() for image in self.present_images[macro]) and all(
+                    not image.run() for image in self.absent_images[macro]):
+                return True
+        return False
 
     def run_options_clicked(self, option):
         """
@@ -258,7 +302,6 @@ class MacroManagerMain(QMainWindow):
     def set_run_count_from_run_options(self):
         """
         Sets the current macro's run count (in run_counts) to whatever item is selected from run_options
-        :return:
         """
         if self.run_options.currentText() == "Run once":
             self.run_counts[self.current_macro] = 1
@@ -272,9 +315,9 @@ class MacroManagerMain(QMainWindow):
         """
         Sets run_options to display the amount of times that the macro should run based on the current macro's run
         count (in run_counts)
-        :return:
         """
         self.run_options.blockSignals(True)
+
         if self.run_counts[self.current_macro] == -1:
             if self.run_options.count() == 4:
                 self.run_options.setCurrentIndex(2)
@@ -291,27 +334,26 @@ class MacroManagerMain(QMainWindow):
             self.run_options.setCurrentIndex(1)
         self.run_options.blockSignals(False)
 
-    def switch_macro(self, option):
+    def switch_macro(self):  # macro_list could be set up to be a file dropdown menu style
         """
-        Allows the user to switch to a different action / create a new one
-        :param option:
+        Allows the user to switch to a different action / create one / remove a macro. Macros are only removable when
+        there are at least two present
         """
-        if self.macro_list.itemText(option) == "Create a new macro":
-            self.macro_list.blockSignals(True)
-            macro_position = len(self.macro_list) - 1
-            self.macro_list.insertItem(macro_position, "Macro " +
-                                       inflect.engine().number_to_words((macro_position + 1)))
-            self.current_macro = macro_position
-            self.macro_list.setCurrentIndex(macro_position)
+        if self.macro_list.currentText() == "Create a macro":
+            self.create_new_macro()
 
-            self.actions.append([])
-            self.present_images.append([])
-            self.absent_images.append([])
-            self.run_counts.append(self.run_counts[self.current_macro - 1])
-            self.hotkeys.append("")
-            listener.change_hotkey(self.hotkeys[self.current_macro], self.current_macro)
-            self.set_hotkey_button.setText("Set a hotkey")
-            self.macro_list.blockSignals(False)
+        elif self.macro_list.currentText() == "Remove a macro":
+            self.remove_macro()
+
+        elif self.macro_list.currentText() == "Rename a macro":
+            popup = RenameMacroPopup(self.macro_list)
+            if popup.exec() == QDialog.DialogCode.Accepted:
+                self.macro_list.setItemText(popup.get_macro_choice(), popup.get_new_name())
+                self.current_macro = popup.get_macro_choice()
+                self.macro_list.setCurrentIndex(popup.get_macro_choice())
+            else:
+                self.macro_list.setCurrentIndex(0)
+
         else:
             self.current_macro = self.macro_list.currentIndex()
             self.set_run_options_from_run_counts()
@@ -323,6 +365,94 @@ class MacroManagerMain(QMainWindow):
 
         self.update_action_list()
         self.update_condition_list()
+        self.update_advanced_action_list()
+
+    def create_new_macro(self):
+        """
+        Adds a new macro to the macro list, and empty sets of all the data associated with a macro
+        """
+        self.macro_list.blockSignals(True)
+        if self.macro_list.itemText(self.macro_list.count() - 1) != "Remove a macro":
+            self.macro_list.addItem("Remove a macro")
+
+        macro_position = len(self.actions)
+        self.macro_list.insertItem(macro_position, "Macro " +
+                                   inflect.engine().number_to_words((macro_position + 1)))
+        self.current_macro = macro_position
+        self.macro_list.setCurrentIndex(macro_position)
+        self.macro_list.blockSignals(False)
+
+        self.actions.append([])
+        self.present_images.append([])
+        self.absent_images.append([])
+        self.advanced_actions.append([])
+
+        self.run_options.blockSignals(True)
+        if self.run_options.count() == 4:
+            self.run_options.removeItem(1)
+        self.run_options.setCurrentIndex(0)
+        self.run_options.blockSignals(False)
+
+        self.run_counts.append(1)
+        self.hotkeys.append("")
+        listener.change_hotkey(self.hotkeys[self.current_macro], self.current_macro)
+        self.set_hotkey_button.setText("Set a hotkey")
+
+    def remove_macro(self):
+        """
+        Opens a popup that allows the user to pick a macro that they'd like to remove,
+        then removes it and all of its fields
+        """
+        popup = RemoveMacroPopup(self.macro_list)
+        if popup.exec() == QDialog.DialogCode.Accepted:
+            self.macro_list.blockSignals(True)
+            removal_index = popup.get_macro_to_remove()
+            self.macro_list.removeItem(removal_index)
+            self.hotkeys.pop(removal_index)
+            self.actions.pop(removal_index)
+            self.advanced_actions.pop(removal_index)
+            self.present_images.pop(removal_index)
+            self.absent_images.pop(removal_index)
+            listener.remove_hotkey(removal_index)
+
+            self.fix_macro_list_names()
+            self.update_trigger_macros(self.action_list, removal_index)
+            self.update_trigger_macros(self.advanced_actions, removal_index)
+
+            self.macro_list.blockSignals(False)
+            self.macro_list.setCurrentIndex(0)  # This is effectively recalling this method and going to else
+        else:
+            self.macro_list.setCurrentIndex(0)  # Same here
+
+    def fix_macro_list_names(self):
+        """
+        Checks if the user has made a custom macro name, if so leaves it alone.
+        If not, it renames it to be Macro + its index.
+        Additionally, adds the remove a macro option if there are at least two macros present, removes it otherwise
+        """
+        for i in range(len(self.actions)):
+            try:
+                w2n.word_to_num(self.macro_list.itemText(i).split()[1])  # Custom macro == word two isn't a number
+                self.macro_list.setItemText(i, ("Macro " + inflect.engine().number_to_words(i + 1)))
+            except (ValueError, IndexError):
+                pass
+
+        if self.macro_list.count() == 4:
+            self.macro_list.removeItem(3)
+        else:
+            if self.macro_list.itemText(self.macro_list.count() - 1) != "Remove a macro":
+                self.macro_list.addItem("Remove a macro")
+
+    def update_trigger_macros(self, action_list, removal_index):
+        for action in action_list:
+            if action_list == self.advanced_actions:
+                action = action[1]
+            for j in range(len(action)):
+                if TriggerMacro is type(action[j]):
+                    if removal_index == action[j].get_index():
+                        action.pop(j)
+                    elif removal_index < action[j].get_index():
+                        action[j].update_fields((-1), action.itemText(removal_index - 1))
 
     def hotkey_clicked(self):
         """
@@ -353,7 +483,6 @@ class MacroManagerMain(QMainWindow):
         itself. Then calls the standard startDrag to drag the item. This is used for the actions list
         :param supportedActions: The default actions that are supported by PyQt5's start drag definition, here because
             supportedActions is a default parameter for the def
-        :return:
         """
         self.action_list.start_pos = self.action_list.currentRow()
         self.action_list.dragged_item = self.action_list.currentItem()
@@ -389,16 +518,20 @@ class MacroManagerMain(QMainWindow):
         if file_name:
             # The issue is that ImageConditions have a QPixmap inside of them (used to display the captured images
             # in the GUI). QPixmaps cannot be pickled, so this is setting all QPixmaps to None, and then recovering
-            # them afterward
-            for i in range(len(self.macro_list) - 1):
+            # them afterward. MacroManagerMain objects also can't be pickled, and the reference is needed
+            # in TriggerMacro, so it also has to be removed
+            for i in range(len(self.actions)):
                 [self.absent_images[i][j].clear_pixmap() for j in range(len(self.absent_images[i]))]
                 [self.present_images[i][j].clear_pixmap() for j in range(len(self.present_images[i]))]
 
-            with open(file_name, 'wb') as f:
-                pickle.dump([self.actions, self.present_images,
-                             self.absent_images, self.hotkeys, self.run_counts], f)
+            macro_name_list = []  # QComboBoxes can't be pickled either
+            [macro_name_list.append(self.macro_list.itemText(i)) for i in range(len(self.actions))]
 
-            for i in range(len(self.macro_list) - 1):
+            with open(file_name, 'wb') as f:
+                pickle.dump([self.actions, self.present_images, self.absent_images,
+                             self.hotkeys, self.run_counts, macro_name_list, self.advanced_actions], f)
+
+            for i in range(len(self.actions)):
                 [self.absent_images[i][j].recover_pixmap() for j in range(len(self.absent_images[i]))]
                 [self.present_images[i][j].recover_pixmap() for j in range(len(self.present_images[i]))]
 
@@ -416,89 +549,152 @@ class MacroManagerMain(QMainWindow):
                 with open(file_name, 'rb') as f:
                     functions = pickle.load(f)
 
-                if len(functions[0]) > 0:
-                    base_length = len(self.actions) + 1
+                self.macro_list.blockSignals(True)
+                base_length = len(self.actions)
 
-                    for i in range(len(functions[0])):
-                        # Recovering the Condition QPixmaps (they're set to None, so they can be pickled)
-                        [present_image.recover_pixmap() for present_image in functions[1][i]]
-                        [absent_image.recover_pixmap() for absent_image in functions[2][i]]
+                for i in range(len(functions[0])):
+                    # Recovering the Condition QPixmaps (they're set to None, so they can be pickled)
+                    [present_image.recover_pixmap() for present_image in functions[1][i]]
+                    [absent_image.recover_pixmap() for absent_image in functions[2][i]]
 
-                        self.macro_list.insertItem(len(self.actions), "Macro " +
-                                                   inflect.engine().number_to_words(i + base_length))
-                        self.actions.append(functions[0][i])
-                        self.present_images.append(functions[1][i])
-                        self.absent_images.append(functions[2][i])
-                        if functions[3][i] not in self.hotkeys:
-                            self.hotkeys.append(functions[3][i])
-                        else:
-                            self.hotkeys.append("")
-                        self.run_counts.append(functions[4][i])
-                        listener.change_hotkey(self.hotkeys[i], i)
+                    self.macro_list.insertItem(len(self.actions), functions[5][i])
+                    self.actions.append(functions[0][i])
+                    self.present_images.append(functions[1][i])
+                    self.absent_images.append(functions[2][i])
+                    self.run_counts.append(functions[4][i])
+                    self.advanced_actions.append(functions[6][i])
 
-                    self.current_macro = len(self.macro_list) - 2
-                    self.macro_list.setCurrentIndex(len(self.macro_list) - 2)
-                    if self.hotkeys[self.current_macro] != "":
-                        self.set_hotkey_button.setText("Set a hotkey (currently " +
-                                                       str(self.hotkeys[self.current_macro]) + ")")
+                    if functions[3][i] not in self.hotkeys:
+                        self.hotkeys.append(functions[3][i])
                     else:
-                        self.set_hotkey_button.setText("Set a hotkey")
+                        self.hotkeys.append("")
+                    listener.change_hotkey(self.hotkeys[-1], (len(self.macro_list)))
 
-                    self.set_run_options_from_run_counts()
-                    self.update_condition_list()
-                    self.update_action_list()
+                self.current_macro = len(self.actions) - 1
+                self.macro_list.setCurrentIndex(self.current_macro)
+                self.fix_macro_list_names()
+
+                for i in range(base_length, len(self.actions)):  # The names need to be fixed before this can run
+                    [action.update_fields(base_length, self.macro_list.itemText(i))
+                     for action in self.actions[i] if isinstance(action, TriggerMacro)]
+
+                if self.hotkeys[self.current_macro] != "":
+                    self.set_hotkey_button.setText("Set a hotkey (currently " +
+                                                   str(self.hotkeys[self.current_macro]) + ")")
+                else:
+                    self.set_hotkey_button.setText("Set a hotkey")
+
+                self.set_run_options_from_run_counts()
+                self.update_condition_list()
+                self.update_action_list()
+
+                self.macro_list.blockSignals(False)
 
         except (_pickle.UnpicklingError, EOFError):  # If you click on a non-pickle file / a corrupt pkl file
             pass
 
-    def switch_to_add_action_view(self):
+    def save_meta_modifiers(self, count, actions_list):
+        self.advanced_actions[self.current_macro] = [count, actions_list.copy()]
+        self.update_advanced_action_list()
+
+    def switch_to_meta_modifier_view(self):
+        advanced_view = AdvancedActions(self)
+
+        self.central_widget.addWidget(advanced_view)
+        self.central_widget.setCurrentWidget(advanced_view)
+
+    def update_advanced_action_list(self):
+        """
+        Refreshes the action list with all actions in actions so that all actions are visible to the user
+        """
+        self.advanced_action_list.clear()
+        try:
+            advanced_list = self.advanced_actions[self.current_macro]
+            for action in advanced_list[1]:
+                item = QListWidgetItem(str(action))
+                item.setData(QtCore.Qt.ItemDataRole.UserRole, action)
+                self.advanced_action_list.addItem(item)
+
+            if advanced_list[0] > 0:
+                meta_label_text = ("After running " +
+                                   inflect.engine().number_to_words(advanced_list[0]) + " times:")
+            else:
+                meta_label_text = ("After failing to detect images " +
+                                   inflect.engine().number_to_words(-advanced_list[0]) + " times:")
+
+        except IndexError:
+            meta_label_text = "No modifiers set"
+
+        self.meta_modifier_context_label.setText(meta_label_text)
+
+    def switch_to_add_action_view(self, sender):
         """
         Called from the + button in the actions side
         The base UI for picking a new action to be made. Allows the user to pick an action from a list, and then
         opens the screen for said action. Also includes a back button if they decide to not add an action
         """
-        self.action_config_view = QWidget()
-        action_layout = QVBoxLayout(self.action_config_view)
+        action_config_view = self.generate_action_list(sender)
+
+        self.central_widget.addWidget(action_config_view)
+        self.central_widget.setCurrentWidget(action_config_view)
+
+    def generate_action_list(self, sender):
+        """
+        Generates a QWidget that has a box containing all the possible actions. If the main app is the sender,
+        a back button will also be created
+        :param sender: The app that wants to run this - send self (not needed if from MMM)
+        """
+        action_config_view = QWidget()
+        action_layout = QVBoxLayout(action_config_view)
 
         action_label = QLabel("Select an Action Type")
         action_layout.addWidget(action_label)
 
-        actions = ["Click", "Move", "Swipe", "Type", "Wait"]
+        actions = ["Click", "Move", "Swipe", "Type", "Wait", "Record position"]
+        if len(self.actions) > 1:
+            actions.append("Trigger macro")
+
         for action in actions:
             button = QPushButton(action)
-            button.clicked.connect(lambda _, a=action: self.show_action_config_view(a.lower()))
+            button.clicked.connect(lambda _, a=action: self.show_action_config_view(a.lower(), sender))
             action_layout.addWidget(button)
 
-        back_button = QPushButton("Back")
-        back_button.clicked.connect(self.switch_to_main_view)
-        action_layout.addWidget(back_button)
+        if type(sender) is not AdvancedActions:
+            back_button = QPushButton("Back")
+            back_button.clicked.connect(self.switch_to_main_view)
+            action_layout.addWidget(back_button)
 
-        self.central_widget.addWidget(self.action_config_view)
-        self.central_widget.setCurrentWidget(self.action_config_view)
+        return action_config_view
 
-    def show_action_config_view(self, action_type):
+    def show_action_config_view(self, action_type, sender):
         """
         Internal logic for switch_to_add_action_view, called after one of the choices for an action is pressed
         It switches to the requested action's UI in their Class, before returning to the prior def
         :param action_type: The option the user clicked on, that associates with an Action. These being click, wait,
             move, type and swipe
-        :return:
+        :param sender: The app that wants to run this - send self (not needed if from MMM)
         """
+        if type(sender) is not AdvancedActions:
+            sender = self
         if action_type == "click":
-            self.action_config_view = ClickXUI(self)
+            action_config_view = ClickXUI(sender)
         elif action_type == "wait":
-            self.action_config_view = WaitUI(self)
+            action_config_view = WaitUI(sender)
         elif action_type == "move":
-            self.action_config_view = MouseToUI(self)
+            action_config_view = MouseToUI(sender)
         elif action_type == "type":
-            self.action_config_view = TypeTextUI(self)
+            action_config_view = TypeTextUI(sender)
         elif action_type == "swipe":
-            self.action_config_view = SwipeXyUi(self)
+            action_config_view = SwipeXyUI(sender)
+        elif action_type == "record position":
+            action_config_view = RecordMousePositionUI(sender, self.actions[self.current_macro])
+        elif action_type == "trigger macro":
+            action_config_view = TriggerMacroUI(sender, self.macro_list)
         else:  # In case something weird gets called that isn't one of the above
             return
 
-        self.central_widget.addWidget(self.action_config_view)
-        self.central_widget.setCurrentWidget(self.action_config_view)
+        self.central_widget.addWidget(action_config_view)
+        self.central_widget.setCurrentWidget(action_config_view)
 
     def add_action(self, action):
         """
@@ -550,7 +746,6 @@ class MacroManagerMain(QMainWindow):
         the ImageCondition prompt. It then updates the condition list so that the user can see it
         :param condition: The ImageCondition object that the user made
         :param present_or_not: If the condition should go into the present_images or absent_images list
-        :return:
         """
         if present_or_not == "p":
             self.present_images[self.current_macro].append(condition)
@@ -576,12 +771,14 @@ class MacroManagerMain(QMainWindow):
         self.clear_condition_display(self.p_image_grid)
         self.clear_condition_display(self.a_image_grid)
 
+        columns = int(self.p_grid_widget.width() // (self.image_dimensions * 17 / 15.7))
+
         for i in range(len(self.present_images[self.current_macro])):
-            image, row, col = self.create_image(i, self.present_images, self.p_image_grid)
+            image, row, col = self.create_image(i, self.present_images, columns)
             self.p_image_grid.addWidget(image, row, col)
 
         for i in range(len(self.absent_images[self.current_macro])):
-            label, row, col = self.create_image(i, self.absent_images, self.a_image_grid)
+            label, row, col = self.create_image(i, self.absent_images, columns)
             self.a_image_grid.addWidget(label, row, col)
 
     @staticmethod
@@ -596,14 +793,14 @@ class MacroManagerMain(QMainWindow):
             grid.takeAt(i)
             widget.deleteLater()
 
-    def create_image(self, i, image_list, condition_grid):
+    def create_image(self, i, image_list, columns):
         """
         Creates a ClickableLabel (a QLabel which can be right-clicked) based on the given image
         in the given image list which has the image inside of it, and returns said label, alongside
         the row and column that the label should be in
         :param i: The index of the image condition to get the pixmap from
         :param image_list: The image condition list
-        :param condition_grid: The grid to add the image too for formatting
+        :param columns: The number of columns of images there should be
         :return: A ClickableLabel with a QPixmap in it, and the row and col (ints) that the label should be in
         """
         pixmap = image_list[self.current_macro][i].image_pixmap
@@ -613,9 +810,13 @@ class MacroManagerMain(QMainWindow):
                                       Qt.TransformationMode.SmoothTransformation)
         label.setPixmap(scaled_pixmap)
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        row = i // condition_grid.columns
-        col = i % condition_grid.columns
+        row = i // columns
+        col = i % columns
         return label, row, col
+
+    def resizeEvent(self, event, **kwargs):
+        self.update_condition_list()
+        super().resizeEvent(event)
 
     def right_click_actions_menu(self, position):
         """
@@ -638,7 +839,7 @@ class MacroManagerMain(QMainWindow):
                 item = item.data(Qt.ItemDataRole.UserRole)
 
                 if selected_action == remove_item:
-                    if item in self.actions[self.current_macro]:
+                    if item in self.actions[self.current_macro]:  # Should always be True, but being safe
                         self.actions[self.current_macro].remove(item)
                         self.update_action_list()
 
@@ -647,12 +848,7 @@ class MacroManagerMain(QMainWindow):
                     self.update_action_list()
 
                 elif selected_action == edit_item:
-                    length_before_addition = len(self.actions[self.current_macro])
-                    self.call_ui_with_params(item)
-                    if len(self.actions[self.current_macro]) > length_before_addition:
-                        item_index = self.actions[self.current_macro].index(item)
-                        self.actions[self.current_macro][item_index] = self.actions[self.current_macro].pop()
-                        self.update_action_list()
+                    self.edit_item(item)
 
         sender.clearSelection()
 
@@ -686,6 +882,21 @@ class MacroManagerMain(QMainWindow):
                     self.update_condition_list()
                     break
 
+    def edit_item(self, item):
+        """
+        Opens the item's UI, and alters the chosen item to match what the user edited it to be
+        :param item: The item to be edited. Can be an Action, or a QListWidgetItem
+        """
+        if QListWidgetItem is type(item):
+            item = item.data(Qt.ItemDataRole.UserRole)
+
+        length_before_edit = len(self.actions[self.current_macro])
+        self.call_ui_with_params(item)
+        if len(self.actions[self.current_macro]) > length_before_edit:
+            item_index = self.actions[self.current_macro].index(item)
+            self.actions[self.current_macro][item_index] = self.actions[self.current_macro].pop()
+            self.update_action_list()
+
     def call_ui_with_params(self, item):
         """
         Calls the UI for the specified item, with the current item's data passed in so the user can edit it
@@ -697,11 +908,13 @@ class MacroManagerMain(QMainWindow):
         elif isinstance(item, MouseTo):
             edit_view = MouseToUI(self, item)
         elif isinstance(item, SwipeXY):
-            edit_view = SwipeXyUi(self, item)
+            edit_view = SwipeXyUI(self, item)
         elif isinstance(item, TypeText):
             edit_view = TypeTextUI(self, item)
         elif isinstance(item, Wait):
             edit_view = WaitUI(self, item)
+        elif isinstance(item, TriggerMacro):
+            edit_view = TriggerMacroUI(self, self.macro_list, item)
         else:
             return
         self.central_widget.addWidget(edit_view)
@@ -710,19 +923,9 @@ class MacroManagerMain(QMainWindow):
         self.event_loop = QEventLoop()
         self.event_loop.exec()
 
-    def call_edit_double_click(self, item):
-        """
-        Gets the data from the passed in item widget, then sends it to call_ui_with_params - a direct .connect() won't
-        give it in the right form
-        :param item: The widget to be edited
-        """
-        item = item.data(Qt.ItemDataRole.UserRole)
-        self.call_ui_with_params(item)
-
     def start_hotkey_listener(self):
         """
         Starts the thread for the listener for the hotkey
-        :return:
         """
         self.listener_thread = threading.Thread(target=self.run_listener, daemon=True)
         self.listener_thread.start()
@@ -735,23 +938,6 @@ class MacroManagerMain(QMainWindow):
     def run_listener(self):
         """Starts the listener, runs via the listener file. Passes in the on_hotkey_pressed definition"""
         listener.start_listener(self.on_hotkey_pressed)
-
-    def on_hotkey_pressed(self, index):
-        """
-        Logic for when the hotkey is pressed. Triggers the macro thread when the macro isn't running, kills it
-        when it is. It does this via notifying the macro thread
-        """
-        if not self.running_macro:
-            self.macros_to_run.put(index)
-            self.notify_action_thread(True)
-        else:
-            if self.current_running_macro != index:
-                self.macros_to_run.put(index)
-            else:
-                self.run_button.setText("Stopping")
-            self.running_macro = False
-        if not self.listener_thread.is_alive():
-            self.run_listener()
 
     def run_macro_thread(self):
         """
@@ -769,20 +955,51 @@ class MacroManagerMain(QMainWindow):
                 #  and finally runs it
                 self.running_macro = True
                 self.current_running_macro = self.macros_to_run.get()
-                self.run_macro(self.current_running_macro)
+                if self.advanced_actions[self.current_running_macro]:
+                    self.advanced_run_macro(self.current_running_macro)
+                else:
+                    self.run_macro(self.current_running_macro)
 
             self.run_button.setText("Run")
+            [action.clear_coordinates() for i in range(len(self.actions)) for action in self.actions[i]
+             if type(action) is RecordMousePosition]
             self.running_macro = False
+
+    def on_hotkey_pressed(self, index):
+        """
+        Logic for when the hotkey is pressed. Triggers the macro thread when the macro isn't running, kills it
+        when it is. It does this via notifying the macro thread
+        :param index: The index of the macro to run
+        """
+        if not self.running_macro:
+            if self.macros_to_run.empty():
+                with self.mutex:
+                    # self.macros_to_run.put(self.current_macro)
+                    self.macros_to_run.put(index)
+                # self.notify_action_thread(True)
+                with self.run_action_condition:
+                    self.run_action_condition.notify()
+
+        else:
+            if self.current_running_macro != index:
+                self.macros_to_run.put(index)
+            else:
+                self.run_button.setText("Stopping")
+            self.running_macro = False
+        if not self.listener_thread.is_alive():
+            self.run_listener()
 
     def notify_action_thread(self, from_hotkey):
         """
         Notifies run_macro_thread to run, works via the hotkey or a press from the Run button. Also sets the
         run button to say Stop, which can be clicked to stop the macro (will display Stopping while stopping)
         """
-        if from_hotkey or self.run_button.text() == "Run":
+        if not from_hotkey and self.run_button.text() == "Run":
             if self.macros_to_run.empty():
-                self.macros_to_run.put(self.current_macro)
+                with self.mutex:
+                    self.macros_to_run.put(self.current_macro)
             self.run_button.setText("Stop")
+
         elif not from_hotkey and self.run_button.text() == "Stop":
             self.macros_to_run.empty()
             self.run_button.setText("Stopping")

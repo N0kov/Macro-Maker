@@ -62,36 +62,33 @@ class WaitUI(QtWidgets.QWidget):
         """
         Initializes the UI elements
         """
-        self.layout = QVBoxLayout(self)
+        layout = QVBoxLayout(self)
 
         self.title = QLabel("Create a new wait action")
-        self.layout.addWidget(self.title)
+        layout.addWidget(self.title)
 
         self.prompt = QLabel("Input the wait time:")
-        self.layout.addWidget(self.prompt)
+        layout.addWidget(self.prompt)
 
         self.text_input = QLineEdit()
-        self.layout.addWidget(self.text_input)
+        layout.addWidget(self.text_input)
 
         if wait_to_edit is not None:
-            self.wait_time = str(wait_to_edit.wait_time)
-            self.text_input.setText(self.wait_time)
+            self.text_input.setText(str(wait_to_edit.wait_time))
             self.title.setText("Edit wait action")
         else:
             self.between_all = QComboBox()
             self.between_all.addItem("Only add a wait here")
             self.between_all.addItem("Add a wait between all non-wait actions")
-            self.layout.addWidget(self.between_all)
+            layout.addWidget(self.between_all)
 
-        self.save_button = QPushButton("Save")
-        self.save_button.clicked.connect(self.save_action)
-        self.layout.addWidget(self.save_button)
+        save_button = QPushButton("Save")
+        save_button.clicked.connect(self.save_action)
+        layout.addWidget(save_button)
 
-        self.back_button = QPushButton("Back")
-        self.back_button.clicked.connect(self.main_app.switch_to_main_view)
-        self.layout.addWidget(self.back_button)
-
-        self.wait_time = None
+        back_button = QPushButton("Back")
+        back_button.clicked.connect(self.main_app.switch_to_main_view)
+        layout.addWidget(back_button)
 
     def save_action(self):
         """
@@ -104,7 +101,6 @@ class WaitUI(QtWidgets.QWidget):
         actions or just added at the end
         """
         wait_time_str = self.text_input.text()
-        # if
         if check_number_validity(wait_time_str):
             wait = Wait(float(wait_time_str))
             if (hasattr(self, 'between_all')

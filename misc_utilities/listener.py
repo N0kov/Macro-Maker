@@ -22,6 +22,11 @@ def change_hotkey(new_hotkey, hotkey_index):
         hotkey.append(convert_to_pynput(new_hotkey))
 
 
+def remove_hotkey(index):
+    global hotkey
+    hotkey.pop(index)
+
+
 def convert_to_pynput(keys):
     try:
         if len(keys) > 1:
@@ -62,3 +67,15 @@ def start_listener(script=None):
         callback = script  # If we're threading, sets a callback
     listener = Listener(on_press=on_press)
     listener.start()
+
+
+def trigger_by_index(index):
+    if listener is not None:
+        listener.stop()
+        if callback:  # For if we're doing threading
+            callback(index)
+
+
+def stop_listener():
+    if listener is not None:
+        listener.stop()

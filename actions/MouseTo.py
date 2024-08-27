@@ -67,26 +67,26 @@ class MouseToUI(QtWidgets.QWidget):
         Initializes the UI elements and installs a custom event filter to listen for keystrokes
         :param mouse_to_to_edit: The passed in MouseTo action to be edited. Defaults to None
         """
-        self.layout = QVBoxLayout(self)
-        self.label = QLabel("Make a mouse movement action")
-        self.layout.addWidget(self.label)
+        layout = QVBoxLayout(self)
+        label = QLabel("Make a mouse to action")
+        layout.addWidget(label)
 
-        self.coordinates_label = QLabel("Press shift to set coordinates to where your mouse is.")
-        self.layout.addWidget(self.coordinates_label)
+        coordinates_label = QLabel("Press shift to record the coordinates of your mouse.")
+        layout.addWidget(coordinates_label)
 
         self.coordinates_display = QLabel("Coordinates: Not set")
-        self.layout.addWidget(self.coordinates_display)
+        layout.addWidget(self.coordinates_display)
 
         if mouse_to_to_edit is not None:
             self.coordinates_display.setText("Coordinates: " + str(self.coordinates))
 
-        self.save_button = QPushButton("Save")
-        self.save_button.clicked.connect(self.save_action)
-        self.layout.addWidget(self.save_button)
+        save_button = QPushButton("Save")
+        save_button.clicked.connect(self.save_action)
+        layout.addWidget(save_button)
 
-        self.back_button = QPushButton("Back")
-        self.back_button.clicked.connect(self.main_app.switch_to_main_view)
-        self.layout.addWidget(self.back_button)
+        back_button = QPushButton("Back")
+        back_button.clicked.connect(self.main_app.switch_to_main_view)
+        layout.addWidget(back_button)
 
         self.installEventFilter(self)
 

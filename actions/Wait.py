@@ -32,6 +32,9 @@ class Wait(Action):
         """
         sleep(self.wait_time)
 
+    def update_fields(self, wait_time):
+        self.__init__(wait_time)
+
 
 def check_number_validity(wait_time):
     """
@@ -83,14 +86,14 @@ class WaitUI(QtWidgets.QWidget):
             layout.addWidget(self.between_all)
 
         save_button = QPushButton("Save")
-        save_button.clicked.connect(self.save_action)
+        save_button.clicked.connect(lambda: self.save_action(wait_to_edit))
         layout.addWidget(save_button)
 
         back_button = QPushButton("Back")
         back_button.clicked.connect(self.main_app.switch_to_main_view)
         layout.addWidget(back_button)
 
-    def save_action(self):
+    def save_action(self, wait_to_edit):
         """
         Checks to see that the user has inputted a time in text_input which is a float that's greater than
         or equal to zero. If this fails a popup opens telling the user to input a positive number, and
@@ -107,7 +110,11 @@ class WaitUI(QtWidgets.QWidget):
                     and self.between_all.currentText() == "Add a wait between all non-wait actions"):
                 self.main_app.add_wait_between_all(wait)
             else:
-                self.main_app.add_action(wait)
+                if wait_to_edit:
+                    wait_to_edit.update_fields(float(wait_time_str))
+                else:
+                    self.main_app.add_action(wait)
+            self.main_app.update_action_list()
             self.main_app.switch_to_main_view()
         else:
             QtWidgets.QMessageBox.warning(self, "Invalid Input", "Wait time must be a positive number.")

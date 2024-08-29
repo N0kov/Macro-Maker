@@ -1,6 +1,9 @@
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (QSizePolicy, QVBoxLayout, QLabel, QPushButton, QComboBox, QLineEdit,
                              QListWidget, QHBoxLayout, QListWidgetItem, QWidget)
 from PyQt6 import QtCore, QtWidgets
+
+import UI_helper
 
 
 class AdvancedActions(QtWidgets.QWidget):
@@ -9,6 +12,8 @@ class AdvancedActions(QtWidgets.QWidget):
         self.main_app = main_app
 
         self.actions = []
+
+        self.macro_list = self.main_app.macro_list
 
         self.layout = QHBoxLayout(self)
 
@@ -28,6 +33,16 @@ class AdvancedActions(QtWidgets.QWidget):
         left_layout.addWidget(self.run_count_input)
 
         self.action_list = QListWidget(self)
+        self.action_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)  # Right click
+        self.action_list.customContextMenuRequested.connect(lambda position:
+                                                            UI_helper.right_click_actions_menu(position,
+                                                                                               self.actions, self))
+        self.action_list.itemDoubleClicked.connect(lambda item: UI_helper.edit_item(item, self))
+        self.action_list.setDragDropMode(QListWidget.DragDropMode.InternalMove)  # Dragging
+        self.action_list.start_pos = None
+        self.action_list.startDrag = self.startDrag
+        self.action_list.dropEvent = self.dropEvent
+
         left_layout.addWidget(self.action_list)
 
         save_button = QPushButton("Save")
@@ -91,3 +106,36 @@ class AdvancedActions(QtWidgets.QWidget):
         except ValueError:
             QtWidgets.QMessageBox.warning(self, "Invalid Input", "Please input a positive integer")
 
+    def get_macro_list(self):
+        return self.main_app.macro_list
+
+    def startDrag(self, supportedActions):  # camelCase to match with PyQt5's def
+        """
+        Overwrites the startDrag def from PyQt5 to record the original row of the item that's being dragged and the item
+        itself. Then calls the standard startDrag to drag the item. This is used for the actions list
+        :param supportedActions: The default actions that are supported by PyQt5's start drag definition, here because
+            supportedActions is a default parameter for the def
+        """
+        self.action_list.start_pos = self.action_list.currentRow()
+        self.action_list.dragged_item = self.action_list.currentItem()
+        super(QListWidget, self.action_list).startDrag(supportedActions)
+
+    def dropEvent(self, event, **kwargs):  # camelCase to match with PyQt5's def
+        """
+        Overwrites the dropEvent def from PyQt5. It still moves the UI element to the new position, but additionally
+        moves the action object in self.action_list to the new position to permanently make the switch and have the
+        macro run in the correct order
+        :param event: The menu item that's dropped. A default parameter that comes with dropEvent from PyQt5
+        """
+        end_pos = self.action_list.indexAt(event.position().toPoint()).row()
+
+        if end_pos == -1:
+            end_pos = self.action_list.count()
+        elif event.position().toPoint().y() < self.action_list.visualItemRect(self.action_list.item(0)).top():
+            end_pos = 0
+
+        if self.action_list.dragged_item:
+            action = self.actions.pop(self.action_list.start_pos)
+            self.actions.insert(end_pos, action)
+        super(QListWidget, self.action_list).dropEvent(event)
+        self.update_action_list()

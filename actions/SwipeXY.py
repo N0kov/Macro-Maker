@@ -32,6 +32,9 @@ class SwipeXY(Action):
         return ("Swipe between (" + str(self.start[0]) + ", " + str(self.start[1]) + ") and (" + str(self.end[0]) +
                 ", " + str(self.end[1]) + ")")
 
+    def update_fields(self, start, end):
+        self.__init__(start, end)
+
 
 class SwipeXyUI(QtWidgets.QWidget):
     def __init__(self, main_app, swipe_xy_to_edit=None):
@@ -77,7 +80,7 @@ class SwipeXyUI(QtWidgets.QWidget):
             self.final_coordinates_display.setText("Coordinates: " + str(self.final_coordinates))
 
         save_button = QPushButton("Save")
-        save_button.clicked.connect(self.save_action)
+        save_button.clicked.connect(lambda: self.save_action(swipe_xy_to_edit))
         layout.addWidget(save_button)
 
         back_button = QPushButton("Back")
@@ -103,10 +106,14 @@ class SwipeXyUI(QtWidgets.QWidget):
             return True
         return super(SwipeXyUI, self).eventFilter(source, event)
 
-    def save_action(self):
+    def save_action(self, swipe_xy_to_edit):
         initial_coordinates = self.initial_coordinates
         final_coordinates = self.final_coordinates
         if initial_coordinates and final_coordinates:
-            action = SwipeXY(initial_coordinates, final_coordinates)
-            self.main_app.add_action(action)
+            if swipe_xy_to_edit:
+                swipe_xy_to_edit.update_fields(initial_coordinates, final_coordinates)
+                self.main_app.update_action_list()
+            else:
+                action = SwipeXY(initial_coordinates, final_coordinates)
+                self.main_app.add_action(action)
         self.main_app.switch_to_main_view()

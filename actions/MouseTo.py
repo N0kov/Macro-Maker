@@ -41,6 +41,9 @@ class MouseTo(Action):
         """
         return "Mouse to (" + str(self.coordinates[0]) + ", " + str(self.coordinates[1]) + ")"
 
+    def update_fields(self, coordinates):
+        self.coordinates = check_valid_input(coordinates)
+
 
 class MouseToUI(QtWidgets.QWidget):
     """
@@ -81,7 +84,7 @@ class MouseToUI(QtWidgets.QWidget):
             self.coordinates_display.setText("Coordinates: " + str(self.coordinates))
 
         save_button = QPushButton("Save")
-        save_button.clicked.connect(self.save_action)
+        save_button.clicked.connect(lambda: self.save_action(mouse_to_to_edit))
         layout.addWidget(save_button)
 
         back_button = QPushButton("Back")
@@ -105,13 +108,17 @@ class MouseToUI(QtWidgets.QWidget):
             return True
         return super(MouseToUI, self).eventFilter(source, event)
 
-    def save_action(self):
+    def save_action(self, mouse_to_edit):
         """
         If coordinates exist, this creates a MouseTo object using self.coordinates, and returns it
          to UI3's action list. If coordinates is None, nothing happens
         """
         coordinates = self.coordinates
         if coordinates:
-            action = MouseTo(coordinates)
-            self.main_app.add_action(action)
+            if mouse_to_edit:
+                mouse_to_edit.update_fields(coordinates)
+                self.main_app.update_action_list()
+            else:
+                action = MouseTo(coordinates)
+                self.main_app.add_action(action)
         self.main_app.switch_to_main_view()

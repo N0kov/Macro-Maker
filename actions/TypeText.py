@@ -63,6 +63,9 @@ class TypeText(Action):
             return "Typing: " + ", ".join(map(str, self.series))
         return ""
 
+    def update_fields(self, phrase):
+        self.__init__(phrase)
+
     def setup_series(self, phrase):
         """
         Separates the passed in string to a series of items in a list. + indicates that a new string should be made.
@@ -146,7 +149,7 @@ class TypeTextUI(QtWidgets.QWidget):
             self.text_input.setText(''.join([str(item) for item in type_text_to_edit.series]))
 
         save_button = QPushButton("Save")
-        save_button.clicked.connect(self.save_action)
+        save_button.clicked.connect(lambda: self.save_action(type_text_to_edit))
         layout.addWidget(save_button)
 
         back_button = QPushButton("Back")
@@ -155,13 +158,17 @@ class TypeTextUI(QtWidgets.QWidget):
 
         self.wait_time = None
 
-    def save_action(self):
+    def save_action(self, type_text_to_edit):
         """
         Creates a TypeText object when the user hits the save button. This is based on the user's text_input
         It's then returned to UI3 and added to its action list
         :return: A TypeText object using the user's input which is sent to UI3
         """
         phrase = self.text_input.text()
-        action = TypeText(phrase)
-        self.main_app.add_action(action)
+        if type_text_to_edit:
+            type_text_to_edit.update_fields(phrase)
+            self.main_app.update_action_list()
+        else:
+            action = TypeText(phrase)
+            self.main_app.add_action(action)
         self.main_app.switch_to_main_view()

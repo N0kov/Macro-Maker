@@ -57,6 +57,9 @@ class ClickX(Action):
         else:
             return self.click + " clicking"
 
+    def update_fields(self, coordinates, click_type):
+        self.__init__(coordinates, click_type)
+
 
 class ClickXUI(QtWidgets.QWidget):
     """
@@ -105,7 +108,7 @@ class ClickXUI(QtWidgets.QWidget):
             self.coordinates_display.setText("Coordinates: " + str(self.coordinates))
 
         save_button = QPushButton("Save")
-        save_button.clicked.connect(self.save_action)
+        save_button.clicked.connect(lambda: self.save_action(click_x_to_edit))
         layout.addWidget(save_button)
 
         back_button = QPushButton("Back")
@@ -135,13 +138,17 @@ class ClickXUI(QtWidgets.QWidget):
         self.coordinates = Controller().position
         self.coordinates_display.setText("Coordinates: " + str(self.coordinates))
 
-    def save_action(self):
+    def save_action(self, click_x_to_edit):
         """
         Creates a ClickX object and returns it to the main app. If no coordinates have been specified, the mouse
         won't move when the action is run
         :return: A ClickX object with the coordinates and click data to UI3's action list.
         """
         click_type = self.click_type_combo.currentText().lower()[0]
-        action = ClickX(self.coordinates, click_type)
-        self.main_app.add_action(action)
+        if click_x_to_edit:
+            click_x_to_edit.update_fields(self.coordinates, click_type)
+            self.main_app.update_action_list()
+        else:
+            action = ClickX(self.coordinates, click_type)
+            self.main_app.add_action(action)
         self.main_app.switch_to_main_view()

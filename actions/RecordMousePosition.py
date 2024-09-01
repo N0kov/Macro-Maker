@@ -45,8 +45,11 @@ class RecordMousePosition(Action):
         """
         return "Recording mouse position / moving to said position"
 
-    def clear_coordinates(self):
+    def clear_coordinates(self):  # It wouldn't make sense to call this update_fields()
         self.coordinates = None
+
+    def update_fields(self):  # RecordMousePosition doesn't really have fields to be updated in the same way as the
+        pass  # rest of Actions, but the other three are important, so this is here out of necessity
 
 
 class RecordMousePositionUI(QtWidgets.QWidget):

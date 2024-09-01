@@ -414,9 +414,12 @@ class MacroManagerMain(QMainWindow):
             self.absent_images.pop(removal_index)
             listener.remove_hotkey(removal_index)
 
+            self.current_macro = 0
+
             self.fix_macro_list_names()
             self.update_trigger_macros(self.actions, removal_index)
             self.update_trigger_macros(self.advanced_actions, removal_index)
+            self.update_action_list()
             self.update_advanced_action_list()
 
             self.macro_list.blockSignals(False)
@@ -446,18 +449,23 @@ class MacroManagerMain(QMainWindow):
             pass
 
     def update_trigger_macros(self, action_list, removal_index):
-        print("Before: " + str(action_list))
         for i in range(len(action_list)):
-            print("layere 1")
-            for action in action_list[i]:
-                print("layer 2")
-                if TriggerMacro is type(action):
-                    if removal_index == action.get_index():
-                        action_list[i].remove(action)
-                    elif removal_index < action.get_index():
-                        action.update_fields(-1, self.macro_list.itemText(action.get_index() - 1))
+            sublist = []
+            if action_list is self.advanced_actions:
+                try:
+                    if action_list[i][1]:
+                        sublist = action_list[i][1]
+                except IndexError:
+                    continue
+            else:
+                sublist = action_list[i]
 
-        print("After" + str(action_list))
+            for j in range(len(sublist) - 1, -1, -1):
+                if type(sublist[j]) is TriggerMacro:
+                    if removal_index == sublist[j].get_index():
+                        sublist.pop(j)
+                    elif removal_index < sublist[j].get_index():
+                        sublist[j].update_fields(-1, self.macro_list.itemText(sublist[j].get_index() - 1))
 
     def hotkey_clicked(self):
         """
@@ -579,10 +587,20 @@ class MacroManagerMain(QMainWindow):
                 self.macro_list.setCurrentIndex(self.current_macro)
                 self.fix_macro_list_names()
 
-                for i in range(base_length, len(self.actions)):  # The names need to be fixed before this can run
-                    [self.actions[i][j].update_fields(base_length, self.macro_list.itemText(
-                                                                        base_length + self.actions[i][j].get_index()))
-                     for j in range(len(self.actions[i])) if type(self.actions[i][j]) is TriggerMacro]
+                for i in range(base_length, len(self.actions)):
+                    for action in self.actions[i]:
+                        if type(action) is TriggerMacro:
+                            action.update_fields(base_length, self.macro_list.itemText(
+                                base_length + action.get_index()))
+
+                for i in range(base_length, len(self.advanced_actions)):
+                    try:
+                        for action in self.advanced_actions[i][1]:
+                            if type(action) is TriggerMacro:
+                                action.update_fields(base_length, self.macro_list.itemText(
+                                    base_length + action.get_index()))
+                    except IndexError:
+                        pass
 
                 if self.hotkeys[self.current_macro] != "":
                     self.set_hotkey_button.setText("Set a hotkey (currently " +
@@ -604,7 +622,7 @@ class MacroManagerMain(QMainWindow):
         self.update_advanced_action_list()
 
     def switch_to_meta_modifier_view(self):
-        advanced_view = AdvancedActions(self)
+        advanced_view = AdvancedActions(self, self.advanced_actions[self.current_macro])
 
         self.central_widget.addWidget(advanced_view)
         self.central_widget.setCurrentWidget(advanced_view)
@@ -764,6 +782,7 @@ class MacroManagerMain(QMainWindow):
         """
         Refreshes the action list with all actions in actions so that all actions are visible to the user
         """
+        # print("updating")
         self.action_list.clear()
         for action in self.actions[self.current_macro]:
             item = QListWidgetItem(str(action))

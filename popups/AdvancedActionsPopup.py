@@ -7,7 +7,7 @@ import UI_helper
 
 
 class AdvancedActions(QtWidgets.QWidget):
-    def __init__(self, main_app):
+    def __init__(self, main_app, current_setup):
         super(AdvancedActions, self).__init__()
         self.main_app = main_app
 
@@ -42,6 +42,15 @@ class AdvancedActions(QtWidgets.QWidget):
         self.action_list.start_pos = None
         self.action_list.startDrag = self.startDrag
         self.action_list.dropEvent = self.dropEvent
+
+        try:
+            if current_setup[0] < 0:
+                self.options.setCurrentIndex(1)
+            self.run_count_input.setText(str(abs(current_setup[0])))
+            self.actions = current_setup[1]
+            self.update_action_list()
+        except IndexError:
+            pass
 
         left_layout.addWidget(self.action_list)
 

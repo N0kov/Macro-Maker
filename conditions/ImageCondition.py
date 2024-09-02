@@ -2,7 +2,7 @@ from conditions.image_similarity_detector import compare_images, threshold_calcu
 import numpy as np
 from pynput.mouse import Controller
 from PyQt6 import QtWidgets, QtCore, QtGui
-from PyQt6.QtGui import QPixmap, QPainter, QImage, QColor, QFont
+from PyQt6.QtGui import QPixmap, QPainter, QImage
 from PyQt6.QtCore import Qt, QEvent
 from PyQt6.QtWidgets import QVBoxLayout, QLabel, QComboBox, QPushButton
 

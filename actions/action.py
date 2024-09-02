@@ -20,3 +20,7 @@ class Action(ABC):
     def run(self):
         pass
 
+    @abstractmethod
+    def update_fields(self, *args):
+        pass
+

@@ -1,6 +1,6 @@
 from actions.action import Action
 from actions.mouse_shortcuts import create_macro_list
-from misc_utilities.listener import trigger_by_index, stop_listener
+from misc_utilities.listener import trigger_by_index
 
 from PyQt6 import QtWidgets
 from PyQt6.QtWidgets import QVBoxLayout, QLabel, QPushButton
@@ -17,9 +17,12 @@ class TriggerMacro(Action):
     def run(self):
         trigger_by_index(self.macro_index)
 
-    def update_fields(self, alter_distance, macro_name):
+    def update_fields(self, alter_distance, new_macro_name):
         self.macro_index = alter_distance + self.macro_index
-        self.macro_name = macro_name
+        self.macro_name = new_macro_name
+
+    def reset_fields(self, macro_index, macro_name):
+        self.__init__(macro_index, macro_name)
 
     def get_index(self):
         return self.macro_index
@@ -58,19 +61,23 @@ class TriggerMacroUI(QtWidgets.QWidget):
         self.macro_box.removeItem(self.main_app.macro_list.currentIndex())
 
         self.save_button = QPushButton("Save")
-        self.save_button.clicked.connect(self.save_action)
+        self.save_button.clicked.connect(lambda: self.save_action(current_choice))
         layout.addWidget(self.save_button)
 
         self.back_button = QPushButton("Back")
         self.back_button.clicked.connect(self.main_app.switch_to_main_view)
         layout.addWidget(self.back_button)
 
-    def save_action(self):
+    def save_action(self, current_choice):
         if self.macro_box.currentIndex() < self.main_app.macro_list.currentIndex():
             self.macro_index = self.macro_box.currentIndex()
         else:
             self.macro_index = self.macro_box.currentIndex() + 1
 
-        action = TriggerMacro(self.macro_index, self.macro_box.currentText())
-        self.main_app.add_action(action)
+        if current_choice:
+            current_choice.reset_fields(self.macro_index, self.macro_box.currentText())
+            self.main_app.update_action_list()
+        else:
+            action = TriggerMacro(self.macro_index, self.macro_box.currentText())
+            self.main_app.add_action(action)
         self.main_app.switch_to_main_view()

@@ -2,7 +2,6 @@ from PyQt6 import QtCore, QtWidgets
 from PyQt6.QtWidgets import QVBoxLayout, QLabel, QComboBox, QPushButton
 from pynput.mouse import Button, Controller
 from actions.action import Action
-from actions.mouse_shortcuts import check_valid_input
 
 # Windows has DPI scaling issues, so if on Windows these global flags need to be set. if os.name == 'nt'
 # should check for Windows and only be True there, but as windll doesn't exist anywhere else, the
@@ -29,7 +28,6 @@ class ClickX(Action):
         :param coordinates: The x, y coordinates to be clicked at. List or tuple
         :param click_type: String, the type of click. Defaults to left, but can be for right or middle
         """
-        # self.coordinates = check_valid_input(coordinates)
         self.coordinates = coordinates
 
         self.click = "Left"  # The default for if the click isn't passed in correctly
@@ -58,6 +56,9 @@ class ClickX(Action):
             return self.click + " click at (" + str(self.coordinates[0]) + ", " + str(self.coordinates[1]) + ")"
         else:
             return self.click + " clicking"
+
+    def update_fields(self, coordinates, click_type):
+        self.__init__(coordinates, click_type)
 
 
 class ClickXUI(QtWidgets.QWidget):
@@ -107,7 +108,7 @@ class ClickXUI(QtWidgets.QWidget):
             self.coordinates_display.setText("Coordinates: " + str(self.coordinates))
 
         save_button = QPushButton("Save")
-        save_button.clicked.connect(self.save_action)
+        save_button.clicked.connect(lambda: self.save_action(click_x_to_edit))
         layout.addWidget(save_button)
 
         back_button = QPushButton("Back")
@@ -137,15 +138,17 @@ class ClickXUI(QtWidgets.QWidget):
         self.coordinates = Controller().position
         self.coordinates_display.setText("Coordinates: " + str(self.coordinates))
 
-    def save_action(self):
+    def save_action(self, click_x_to_edit):
         """
         Creates a ClickX object and returns it to the main app. If no coordinates have been specified, the mouse
         won't move when the action is run
         :return: A ClickX object with the coordinates and click data to UI3's action list.
         """
         click_type = self.click_type_combo.currentText().lower()[0]
-        # coordinates = self.coordinates
-        # if coordinates:
-        action = ClickX(self.coordinates, click_type)
-        self.main_app.add_action(action)
+        if click_x_to_edit:
+            click_x_to_edit.update_fields(self.coordinates, click_type)
+            self.main_app.update_action_list()
+        else:
+            action = ClickX(self.coordinates, click_type)
+            self.main_app.add_action(action)
         self.main_app.switch_to_main_view()

@@ -70,13 +70,10 @@ def start_listener(script=None):
 
 
 def trigger_by_index(index):
-    try:
-        if listener is not None:
-            listener.stop()
-            if callback:  # For if we're doing threading
-                callback(index)
-    except Exception as e:
+    if listener is not None:
         listener.stop()
+        if callback:  # For if we're doing threading
+            callback(index)
 
 
 def stop_listener():

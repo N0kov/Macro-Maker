@@ -14,7 +14,8 @@ class RenameMacroPopup(QDialog):
 
         layout = QVBoxLayout()
 
-        removal_label = QLabel("Pick the macro you'd like to rename")
+        removal_label = QLabel("Pick the macro you'd like to rename"
+                               "\nIt must be shorter than 20 characters")
         layout.addWidget(removal_label)
 
         self.macro_choice_box = create_macro_list(macro_list)
@@ -38,4 +39,4 @@ class RenameMacroPopup(QDialog):
         return self.macro_choice_box.currentIndex()
 
     def get_new_name(self):
-        return self.new_name.text()
+        return self.new_name.text()[0:20]

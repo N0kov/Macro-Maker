@@ -10,7 +10,6 @@ import word2number.w2n as w2n
 from PyQt6.QtWidgets import *
 from PyQt6.QtGui import QAction
 
-import UI_helper
 from conditions.ImageCondition import *
 from popups.AdvancedActionsPopup import AdvancedActions
 from popups.HotkeyPopup import HotkeyPopup
@@ -20,6 +19,7 @@ from popups.RunCountPopup import RunCountPopup
 from actions import *
 from misc_utilities import listener
 from misc_utilities.ClickableQLabel import ClickableLabel
+from misc_utilities.CustomDraggableList import CustomDraggableList
 
 
 class MacroManagerMain(QMainWindow):
@@ -116,15 +116,7 @@ class MacroManagerMain(QMainWindow):
         actions_layout = QVBoxLayout(actions_frame)
         actions_label = QLabel("Actions")
 
-        self.action_list = QListWidget(self)  # action_list has custom logic
-        self.action_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)  # Right click
-        self.action_list.customContextMenuRequested.connect(lambda position: UI_helper.right_click_actions_menu(
-                                                                   position, self.actions[self.current_macro], self))
-        self.action_list.itemDoubleClicked.connect(lambda item: UI_helper.edit_item(item, self))  # Double click = edit
-        self.action_list.setDragDropMode(QListWidget.DragDropMode.InternalMove)  # Dragging
-        self.action_list.start_pos = None
-        self.action_list.startDrag = self.startDrag
-        self.action_list.dropEvent = self.dropEvent
+        self.action_list = CustomDraggableList(self, self.actions)
 
         actions_layout.addWidget(actions_label)
         actions_layout.addWidget(self.action_list)
@@ -134,7 +126,8 @@ class MacroManagerMain(QMainWindow):
         meta_modifier_box = QVBoxLayout()
         self.meta_modifier_context_label = QLabel("No modifiers set")
         actions_layout.addWidget(self.meta_modifier_context_label)
-        self.advanced_action_list = QListWidget(self)
+        self.advanced_action_list = CustomDraggableList(self, self.advanced_actions)
+
         meta_modifier_box.addWidget(self.advanced_action_list)
         actions_layout.addLayout(meta_modifier_box)
 
@@ -490,37 +483,6 @@ class MacroManagerMain(QMainWindow):
                 self.set_hotkey_button.setText("Set a hotkey")
             listener.change_hotkey(self.hotkeys[self.current_macro], self.current_macro)
 
-    def startDrag(self, supportedActions):  # camelCase to match with PyQt5's def
-        """
-        Overwrites the startDrag def from PyQt5 to record the original row of the item that's being dragged and the item
-        itself. Then calls the standard startDrag to drag the item. This is used for the actions list
-        :param supportedActions: The default actions that are supported by PyQt5's start drag definition, here because
-            supportedActions is a default parameter for the def
-        """
-        self.action_list.start_pos = self.action_list.currentRow()
-        self.action_list.dragged_item = self.action_list.currentItem()
-        super(QListWidget, self.action_list).startDrag(supportedActions)
-
-    def dropEvent(self, event, **kwargs):  # camelCase to match with PyQt5's def
-        """
-        Overwrites the dropEvent def from PyQt5. It still moves the UI element to the new position, but additionally
-        moves the action object in self.action_list to the new position to permanently make the switch and have the
-        macro run in the correct order
-        :param event: The menu item that's dropped. A default parameter that comes with dropEvent from PyQt5
-        """
-        end_pos = self.action_list.indexAt(event.position().toPoint()).row()
-
-        if end_pos == -1:
-            end_pos = self.action_list.count()
-        elif event.position().toPoint().y() < self.action_list.visualItemRect(self.action_list.item(0)).top():
-            end_pos = 0
-
-        if self.action_list.dragged_item:
-            action = self.actions[self.current_macro].pop(self.action_list.start_pos)
-            self.actions[self.current_macro].insert(end_pos, action)
-        super(QListWidget, self.action_list).dropEvent(event)
-        self.update_action_list()
-
     def save_macros(self):
         """
         Saves the actions, conditions and hotkeys as a pickle file with a basic GUI file explorer dialogue
@@ -611,6 +573,7 @@ class MacroManagerMain(QMainWindow):
                 self.set_run_options_from_run_counts()
                 self.update_condition_list()
                 self.update_action_list()
+                self.update_advanced_action_list()
 
                 self.macro_list.blockSignals(False)
 
@@ -635,7 +598,6 @@ class MacroManagerMain(QMainWindow):
         try:
             advanced_list = self.advanced_actions[self.current_macro]
             for action in advanced_list[1]:
-                # print(action)
                 item = QListWidgetItem(str(action))
                 item.setData(QtCore.Qt.ItemDataRole.UserRole, action)
                 self.advanced_action_list.addItem(item)

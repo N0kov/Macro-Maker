@@ -1,9 +1,8 @@
-from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (QSizePolicy, QVBoxLayout, QLabel, QPushButton, QComboBox, QLineEdit,
                              QListWidget, QHBoxLayout, QListWidgetItem, QWidget)
 from PyQt6 import QtCore, QtWidgets
 
-import UI_helper
+from misc_utilities.CustomDraggableList import CustomDraggableList
 
 
 class AdvancedActions(QtWidgets.QWidget):
@@ -12,6 +11,7 @@ class AdvancedActions(QtWidgets.QWidget):
         self.main_app = main_app
 
         self.actions = []
+        self.current_macro = 0  # Purely here for compatibility with CustomDraggableList
 
         self.macro_list = self.main_app.macro_list
 
@@ -32,16 +32,7 @@ class AdvancedActions(QtWidgets.QWidget):
         left_layout.addWidget(run_count_label)
         left_layout.addWidget(self.run_count_input)
 
-        self.action_list = QListWidget(self)
-        self.action_list.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)  # Right click
-        self.action_list.customContextMenuRequested.connect(lambda position:
-                                                            UI_helper.right_click_actions_menu(position,
-                                                                                               self.actions, self))
-        self.action_list.itemDoubleClicked.connect(lambda item: UI_helper.edit_item(item, self))
-        self.action_list.setDragDropMode(QListWidget.DragDropMode.InternalMove)  # Dragging
-        self.action_list.start_pos = None
-        self.action_list.startDrag = self.startDrag
-        self.action_list.dropEvent = self.dropEvent
+        self.action_list = CustomDraggableList(self, [self.actions])
 
         try:
             if current_setup[0] < 0:

@@ -1,15 +1,15 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QListWidgetItem, QMenu
+from copy import deepcopy
 
 from actions import *
 
 
-def right_click_actions_menu(position, item_source_list, source):
+def right_click_actions_menu(position, source):
     """
     The menu for right-clicking on an action or condition. It creates a clickable dropdown menu, that allows the
     user to copy an item, edit one or delete the item.
     :param position: The QPoint x,y coordinates that the user's mouse was at when the right-clicked on the item
-    :param item_source_list: The list that the selected item comes from
     :param source: The app that sent this request
     """
     sender = source.sender()
@@ -18,8 +18,6 @@ def right_click_actions_menu(position, item_source_list, source):
     edit_the_item = menu.addAction("Edit")
     remove_item = menu.addAction("Remove")
 
-    # if sender == self.action_list:  # This has a chance of causing problems, but it should be fine, and makes
-    # reusing it much easier
     global_position = sender.viewport().mapToGlobal(position)
     selected_action = menu.exec(global_position)
     item = sender.itemAt(position)
@@ -27,15 +25,30 @@ def right_click_actions_menu(position, item_source_list, source):
         item = item.data(Qt.ItemDataRole.UserRole)
 
         if selected_action == remove_item:
-            item_source_list.remove(item)
+            copy_or_remove_item(source, item, "remove")
 
         elif selected_action == copy_item:
-            item_source_list.append(item)
+            copy_or_remove_item(source, item, "append")
 
         elif selected_action == edit_the_item:
             edit_item(item, source)
 
         source.update_action_list()
+
+
+def copy_or_remove_item(source, item, choice):
+    # There are three different things tried here for copy and remove as there are three different possible data
+    # types that could be passed in. See dropEvent from CustomDraggableList for a full explanation
+    if choice == "append":
+        item = deepcopy(item)
+    try:
+        if source.source_list is source.main_application.advanced_actions:
+            method = getattr(source.source_list[source.main_application.current_macro][1], choice)
+        else:
+            method = getattr(source.source_list[source.main_application.current_macro], choice)
+    except AttributeError:
+        method = getattr(source.source_list[0], choice)
+    method(item)
 
 
 def edit_item(item, source):
@@ -71,9 +84,10 @@ def call_ui_with_params(source, item):
     else:
         return
 
+    # It's possible that one layer above could be calling this, or two layers above (if in AdvancedActions)
     try:
-        source.central_widget.addWidget(edit_view)
-        source.central_widget.setCurrentWidget(edit_view)
+        source.main_application.central_widget.addWidget(edit_view)
+        source.main_application.central_widget.setCurrentWidget(edit_view)
     except AttributeError:
-        source.main_app.central_widget.addWidget(edit_view)
-        source.main_app.central_widget.setCurrentWidget(edit_view)
+        source.main_application.main_app.central_widget.addWidget(edit_view)
+        source.main_application.main_app.central_widget.setCurrentWidget(edit_view)

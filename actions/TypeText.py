@@ -56,12 +56,10 @@ class TypeText(Action):
 
     def __str__(self):
         """
-        Returns a string representation of the TypeText object in the form "Typing [text here]". Text for example will
-        look like: h, e, l, l, o,  , Key.something
+        Returns a string representation of the TypeText object in the form "Typing [text here]".
+        Text for example will look like: h, e, l, l, o,  , Key.something
         """
-        if self.series:
-            return "Typing: " + ", ".join(map(str, self.series))
-        return ""
+        return "Typing: " + ", ".join(map(str, self.series))
 
     def update_fields(self, phrase):
         self.__init__(phrase)
@@ -168,7 +166,7 @@ class TypeTextUI(QtWidgets.QWidget):
         if type_text_to_edit:
             type_text_to_edit.update_fields(phrase)
             self.main_app.update_action_list()
-        else:
+        elif phrase != "":
             action = TypeText(phrase)
             self.main_app.add_action(action)
         self.main_app.switch_to_main_view()

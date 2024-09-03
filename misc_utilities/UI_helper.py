@@ -22,16 +22,16 @@ def right_click_actions_menu(position, source):
     selected_action = menu.exec(global_position)
     item = sender.itemAt(position)
     if item is not None:
-        item = item.data(Qt.ItemDataRole.UserRole)
+        item_data = item.data(Qt.ItemDataRole.UserRole)
 
         if selected_action == remove_item:
-            copy_or_remove_item(source, item, "remove")
+            copy_or_remove_item(source, sender.row(item), "pop")
 
         elif selected_action == copy_item:
-            copy_or_remove_item(source, item, "append")
+            copy_or_remove_item(source, item_data, "append")
 
         elif selected_action == edit_the_item:
-            edit_item(item, source)
+            edit_item(item_data, source)
 
         source.update_action_list()
 
@@ -79,6 +79,8 @@ def call_ui_with_params(source, item):
         edit_view = TypeTextUI(source, item)
     elif isinstance(item, Wait):
         edit_view = WaitUI(source, item)
+    elif isinstance(item, NudgeMouse):
+        edit_view = NudgeMouseUI(source, item)
     elif isinstance(item, TriggerMacro):
         edit_view = TriggerMacroUI(source, source.get_macro_list(), item)
     else:

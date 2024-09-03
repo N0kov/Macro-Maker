@@ -11,7 +11,7 @@ from PyQt6.QtWidgets import *
 from PyQt6.QtGui import QAction
 
 from conditions.ImageCondition import *
-from popups.AdvancedActionsPopup import AdvancedActions
+from AdvancedActions import AdvancedActions
 from popups.HotkeyPopup import HotkeyPopup
 from popups.RemoveMacroPopup import RemoveMacroPopup
 from popups.RenameMacroPopup import RenameMacroPopup
@@ -20,6 +20,7 @@ from actions import *
 from misc_utilities import listener
 from misc_utilities.ClickableQLabel import ClickableLabel
 from misc_utilities.CustomDraggableList import CustomDraggableList
+from misc_utilities.QStackedListCleaner import QStackedWidgetCleaner
 
 
 class MacroManagerMain(QMainWindow):
@@ -49,7 +50,7 @@ class MacroManagerMain(QMainWindow):
         self.setWindowTitle("Macro Manager")
         self.setGeometry(400, 200, 1100, 700)
 
-        self.central_widget = QStackedWidget(self)
+        self.central_widget = QStackedWidgetCleaner(self)
         self.setCentralWidget(self.central_widget)
 
         self.main_view = QWidget()
@@ -331,6 +332,8 @@ class MacroManagerMain(QMainWindow):
         Allows the user to switch to a different action / create one / remove a macro. Macros are only removable when
         there are at least two present
         """
+        self.central_widget.cleanup_widgets()
+
         if self.macro_list.currentText() == "Create a macro":
             self.create_new_macro()
 
@@ -637,7 +640,7 @@ class MacroManagerMain(QMainWindow):
         action_label = QLabel("Select an Action Type")
         action_layout.addWidget(action_label)
 
-        actions = ["Click", "Move", "Swipe", "Type", "Wait", "Record position"]
+        actions = ["Click", "Move", "Nudge", "Swipe", "Type", "Wait", "Record position"]
         if len(self.actions) > 1:
             actions.append("Trigger macro")
 
@@ -669,6 +672,8 @@ class MacroManagerMain(QMainWindow):
             action_config_view = WaitUI(sender)
         elif action_type == "move":
             action_config_view = MouseToUI(sender)
+        elif action_type == "nudge":
+            action_config_view = NudgeMouseUI(sender)
         elif action_type == "type":
             action_config_view = TypeTextUI(sender)
         elif action_type == "swipe":
@@ -697,7 +702,7 @@ class MacroManagerMain(QMainWindow):
         """
         A custom version of add_action for the Wait class. which adds a Wait between all non-wait actions.
         If it goes say type, wait, type, there will not be an additional wait added between the two types.
-        No wait is added at index zero
+        No wait is added at index zero. These are intentionally all the same reference to Wait
         It updates the UI for actions after to show the added Waits
         :param wait: The created wait action to be added
         """
@@ -705,7 +710,7 @@ class MacroManagerMain(QMainWindow):
             for i in range(len(self.actions[self.current_macro]) - 1, 0, -1):
                 if (not isinstance(self.actions[self.current_macro][i], Wait) and
                         not isinstance(self.actions[self.current_macro][i - 1], Wait)):
-                    self.actions[self.current_macro].insert(i, wait)
+                    self.actions[self.current_macro].insert(i, wait)  # Use deepcopy instead to have unique Waits
             self.update_action_list()
 
     def switch_to_add_condition_view(self):
@@ -724,8 +729,6 @@ class MacroManagerMain(QMainWindow):
         the UI to finish, this also quits it
         """
         self.central_widget.setCurrentWidget(self.main_view)
-        # if hasattr(self, 'event_loop') and self.event_loop.isRunning():
-        #     self.event_loop.quit()
 
     def add_condition(self, condition, present_or_not):
         """
@@ -744,7 +747,6 @@ class MacroManagerMain(QMainWindow):
         """
         Refreshes the action list with all actions in actions so that all actions are visible to the user
         """
-        # print("updating")
         self.action_list.clear()
         for action in self.actions[self.current_macro]:
             item = QListWidgetItem(str(action))
@@ -756,6 +758,8 @@ class MacroManagerMain(QMainWindow):
         Refreshes the condition list so that all conditions are visible to the user. They're detonated in the UI
         as "Present Image" or "Absent Image"
         """
+        self.central_widget.cleanup_widgets()
+
         self.clear_condition_display(self.p_image_grid)
         self.clear_condition_display(self.a_image_grid)
 
@@ -867,8 +871,6 @@ class MacroManagerMain(QMainWindow):
                 #  (to know when a hotkey is pressed if the macro should be added to the queue or not),
                 #  and finally runs it
                 self.running_macro = True
-                # print("Advanced actions: " + str(self.advanced_actions) + " Length: " + str(len(self.advanced_actions)))
-                # print("Current running macro: " + str(self.current_running_macro))
                 self.current_running_macro = self.macros_to_run.get()
                 if self.advanced_actions[self.current_running_macro]:
                     self.advanced_run_macro(self.current_running_macro)
@@ -889,9 +891,7 @@ class MacroManagerMain(QMainWindow):
         if not self.running_macro:
             if self.macros_to_run.empty():
                 with self.mutex:
-                    # self.macros_to_run.put(self.current_macro)
                     self.macros_to_run.put(index)
-                # self.notify_action_thread(True)
                 with self.run_action_condition:
                     self.run_action_condition.notify()
 

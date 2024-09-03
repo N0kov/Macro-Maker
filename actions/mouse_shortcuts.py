@@ -53,3 +53,23 @@ def create_macro_list(macro_list):
         macro_to_remove_box.addItem(macro_list.itemText(i))
         i += 1
     return macro_to_remove_box
+
+
+def set_click_type(click_type_string):
+    print(click_type_string)
+    if click_type_string:
+        click_type_string = click_type_string.lower()
+        if click_type_string in ("l", "left"):
+            click = "Left"
+            click_type = Button.left
+        elif click_type_string in ("r", "right"):
+            click_type = Button.right
+            click = "Right"
+        else:
+            click_type = Button.middle
+            click = "Middle"
+    else:
+        click_type = None
+        click = None
+
+    return click, click_type

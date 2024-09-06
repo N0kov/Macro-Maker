@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import (QSizePolicy, QVBoxLayout, QLabel, QPushButton, QComboBox, QLineEdit,
-                             QListWidget, QHBoxLayout, QListWidgetItem, QWidget)
+                             QHBoxLayout, QListWidgetItem, QWidget)
 from PyQt6 import QtCore, QtWidgets
 
 from misc_utilities.CustomDraggableList import CustomDraggableList

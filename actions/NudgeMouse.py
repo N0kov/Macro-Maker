@@ -29,16 +29,20 @@ class NudgeMouse(Action):
             else:
                 return_string = return_string + str(-self.increment[0]) + " pixels left"
 
-        if self.click is not None:
+        if self.click:
             return_string = return_string + " while " + self.click.lower() + " clicking"
 
         return return_string
 
     def run(self):
-        Controller().press(self.click_type)
-        Controller().position = (self.increment[0] + Controller().position[0],
-                                 self.increment[1] + Controller().position[1])
-        Controller().release(self.click_type)
+        if self.click_type:
+            Controller().press(self.click_type)
+            Controller().position = (self.increment[0] + Controller().position[0],
+                                     self.increment[1] + Controller().position[1])
+            Controller().release(self.click_type)
+        else:
+            Controller().position = (self.increment[0] + Controller().position[0],
+                                     self.increment[1] + Controller().position[1])
 
     def update_fields(self, increment, click_held):
         self.__init__(increment, click_held)
@@ -93,7 +97,7 @@ class NudgeMouseUI(QWidget):
         if nudge_mouse_to_edit:
             self.x_axis_text_input.setText(str(nudge_mouse_to_edit.increment[0]))
             self.y_axis_text_input.setText(str(-nudge_mouse_to_edit.increment[1]))
-            if nudge_mouse_to_edit.click is not None:
+            if nudge_mouse_to_edit.click:
                 self.hold_mouse_box.blockSignals(True)
                 self.hold_mouse_box.setCurrentIndex(1)
                 self.hold_mouse_box.blockSignals(False)
@@ -142,7 +146,7 @@ class NudgeMouseUI(QWidget):
             y = 0
 
         if x != 0 or y != 0:
-            if nudge_mouse_to_edit is not None:
+            if nudge_mouse_to_edit:
                 if self.hold_mouse_box.currentText() == "Yes":
                     nudge_mouse_to_edit.update_fields([x, y], self.click_type_combo.currentText())
                 else:

@@ -1,26 +1,18 @@
 import _pickle
 import pickle
+import queue
 import sys
 import threading
 
 import inflect
-import queue
 import word2number.w2n as w2n
-
-from PyQt6.QtWidgets import *
 from PyQt6.QtGui import QAction
+from PyQt6.QtWidgets import *
 
-from conditions.ImageCondition import *
-from AdvancedActions import AdvancedActions
-from popups.HotkeyPopup import HotkeyPopup
-from popups.RemoveMacroPopup import RemoveMacroPopup
-from popups.RenameMacroPopup import RenameMacroPopup
-from popups.RunCountPopup import RunCountPopup
 from actions import *
-from misc_utilities import listener
-from misc_utilities.ClickableQLabel import ClickableLabel
-from misc_utilities.CustomDraggableList import CustomDraggableList
-from misc_utilities.QStackedListCleaner import QStackedWidgetCleaner
+from conditions.ImageCondition import *
+from misc_utilities import *
+from ui_files import *
 
 
 class MacroManagerMain(QMainWindow):
@@ -122,15 +114,21 @@ class MacroManagerMain(QMainWindow):
         actions_layout.addWidget(actions_label)
         actions_layout.addWidget(self.action_list)
 
-        meta_modifier_label = QLabel("Meta modifiers")
-        actions_layout.addWidget(meta_modifier_label)
+        self.meta_modifier_run_type = QLabel("")
         meta_modifier_box = QVBoxLayout()
-        self.meta_modifier_context_label = QLabel("No modifiers set")
-        actions_layout.addWidget(self.meta_modifier_context_label)
         self.advanced_action_list = CustomDraggableList(self, self.advanced_actions)
-
         meta_modifier_box.addWidget(self.advanced_action_list)
-        actions_layout.addLayout(meta_modifier_box)
+        meta_modifier_box.setContentsMargins(0, 0, 0, 0)
+
+        self.meta_modifier_widget = QWidget()
+        self.meta_modifier_widget.setLayout(meta_modifier_box)
+        actions_layout.addWidget(self.meta_modifier_run_type)
+        actions_layout.addWidget(self.meta_modifier_widget)
+
+        self.meta_modifier_run_type.hide()
+        self.meta_modifier_widget.hide()
+
+        actions_layout.addWidget(self.meta_modifier_widget)
 
         plus_button_stylesheet = ("""
         QPushButton {
@@ -327,7 +325,7 @@ class MacroManagerMain(QMainWindow):
             self.run_options.setCurrentIndex(1)
         self.run_options.blockSignals(False)
 
-    def switch_macro(self):  # macro_list could be set up to be a file dropdown menu style
+    def switch_macro(self):
         """
         Allows the user to switch to a different action / create one / remove a macro. Macros are only removable when
         there are at least two present
@@ -585,6 +583,7 @@ class MacroManagerMain(QMainWindow):
 
     def save_meta_modifiers(self, count, actions_list):
         self.advanced_actions[self.current_macro] = [count, actions_list.copy()]
+
         self.update_advanced_action_list()
 
     def switch_to_meta_modifier_view(self):
@@ -612,10 +611,13 @@ class MacroManagerMain(QMainWindow):
                 meta_label_text = ("After failing to detect images " +
                                    inflect.engine().number_to_words(-advanced_list[0]) + " times:")
 
-        except IndexError:
-            meta_label_text = "No modifiers set"
+            self.meta_modifier_run_type.setText(meta_label_text)
+            self.meta_modifier_run_type.show()
+            self.meta_modifier_widget.show()
 
-        self.meta_modifier_context_label.setText(meta_label_text)
+        except IndexError:
+            self.meta_modifier_run_type.hide()
+            self.meta_modifier_widget.hide()
 
     def switch_to_add_action_view(self, sender):
         """

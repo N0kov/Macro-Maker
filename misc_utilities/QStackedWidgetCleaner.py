@@ -16,7 +16,7 @@ class QStackedWidgetCleaner(QStackedWidget):
         """
         Clears all widgets but the base UI one
         """
-        for i in reversed(range(1, self.count())):
+        for i in reversed(range(1, self.count() - 3)):
             widget = self.widget(i)
             self.removeWidget(widget)
             widget.deleteLater()

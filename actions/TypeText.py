@@ -59,7 +59,7 @@ class TypeText(Action):
         Returns a string representation of the TypeText object in the form "Typing [text here]".
         Text for example will look like: h, e, l, l, o,  , Key.something
         """
-        return "Typing: " + ", ".join(map(str, self.series))
+        return "Typing " + ", ".join(map(str, self.series))
 
     def update_fields(self, phrase):
         self.__init__(phrase)

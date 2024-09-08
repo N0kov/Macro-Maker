@@ -3,6 +3,8 @@ import pickle
 import queue
 import sys
 import threading
+import traceback
+import sys
 
 import inflect
 import word2number.w2n as w2n
@@ -456,10 +458,10 @@ class MacroManagerMain(QMainWindow):
 
             for j in range(len(sublist) - 1, -1, -1):
                 if type(sublist[j]) is TriggerMacro:
-                    if removal_index == sublist[j].get_index():
+                    if removal_index == sublist[j].get_index:
                         sublist.pop(j)
-                    elif removal_index < sublist[j].get_index():
-                        sublist[j].update_fields(-1, self.macro_list.itemText(sublist[j].get_index() - 1))
+                    elif removal_index < sublist[j].get_index:
+                        sublist[j].update_fields(-1, self.macro_list.itemText(sublist[j].get_index - 1))
 
     def hotkey_clicked(self):
         """
@@ -554,14 +556,14 @@ class MacroManagerMain(QMainWindow):
                     for action in self.actions[i]:
                         if type(action) is TriggerMacro:
                             action.update_fields(base_length, self.macro_list.itemText(
-                                base_length + action.get_index()))
+                                base_length + action.get_index))
 
                 for i in range(base_length, len(self.advanced_actions)):
                     try:
                         for action in self.advanced_actions[i][1]:
                             if type(action) is TriggerMacro:
                                 action.update_fields(base_length, self.macro_list.itemText(
-                                    base_length + action.get_index()))
+                                    base_length + action.get_index))
                     except IndexError:
                         pass
 

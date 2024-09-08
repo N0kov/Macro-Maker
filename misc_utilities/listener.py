@@ -23,11 +23,19 @@ def change_hotkey(new_hotkey, hotkey_index):
 
 
 def remove_hotkey(index):
+    """
+    Removes the hotkey at the specified index from the hotkey list
+    """
     global hotkey
     hotkey.pop(index)
 
 
 def convert_to_pynput(keys):
+    """
+    Attempts to convert the passed in string to pynput form. If it isn't valid, an empty string is returned instead
+    :param keys: The string to be processed
+    :return: The pynput form of keys / an empty string if invalid
+    """
     try:
         if len(keys) > 1:
             return getattr(Key, keys)
@@ -70,6 +78,10 @@ def start_listener(script=None):
 
 
 def trigger_by_index(index):
+    """
+    Calls the callback function at the index passed in, and stops the listener
+    :param index: The index that should be called
+    """
     if listener is not None:
         listener.stop()
         if callback:  # For if we're doing threading
@@ -77,5 +89,8 @@ def trigger_by_index(index):
 
 
 def stop_listener():
+    """
+    Stops the listener
+    """
     if listener is not None:
         listener.stop()

@@ -37,18 +37,30 @@ def right_click_actions_menu(position, source):
 
 
 def copy_or_remove_item(source, item, choice):
+    """
+    Calls the desired method (either append or remove) on the passed in list using the specified item. Does
+    nothing if choice is not append or remove
+    :param source: The list to be edited - list
+    :param item: The item to be copied / removed - anything
+    :param choice: What the user wants to do - String
+    """
     # There are three different things tried here for copy and remove as there are three different possible data
     # types that could be passed in. See dropEvent from CustomDraggableList for a full explanation
-    if choice == "append":
-        item = deepcopy(item)
-    try:
-        if source.source_list is source.main_application.advanced_actions:
-            method = getattr(source.source_list[source.main_application.current_macro][1], choice)
-        else:
-            method = getattr(source.source_list[source.main_application.current_macro], choice)
-    except AttributeError:
-        method = getattr(source.source_list[0], choice)
-    method(item)
+    if choice == "append" or choice == "remove":
+        if choice == "append":
+            item = deepcopy(item)
+        try:
+            if source.source_list is source.main_application.advanced_actions:
+                method = getattr(source.source_list[source.main_application.current_macro][1], choice)
+            else:
+                method = getattr(source.source_list[source.main_application.current_macro], choice)
+        except AttributeError:
+            method = getattr(source.source_list[0], choice)
+        except ValueError:
+            return
+        method(item)
+    else:
+        pass
 
 
 def edit_item(item, source):

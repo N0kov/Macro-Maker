@@ -1,10 +1,10 @@
-from conditions.image_similarity_detector import compare_images, threshold_calculation, get_image as capture_image
+from conditions.image_similarity_detector import compare_images, get_image as capture_image
 import numpy as np
 from pynput.mouse import Controller
 from PyQt6 import QtWidgets, QtCore, QtGui
 from PyQt6.QtGui import QPixmap, QImage
 from PyQt6.QtCore import Qt, QEvent
-from PyQt6.QtWidgets import QVBoxLayout, QLabel, QComboBox, QPushButton
+from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton, QSlider, QWidget
 
 
 class ImageCondition:
@@ -13,7 +13,14 @@ class ImageCondition:
     the same as what's on screen and can return the current image
     """
 
-    def __init__(self, top_left, bottom_right, image):
+    def __init__(self, top_left, bottom_right, image, threshold_modifier):
+        """
+        Initializes ImageCondition, sets the coordinates of the image, the numpy array of the image, a pixmap
+        of it, and the threshold of error that this image can have
+        :param top_left:
+        :param bottom_right:
+        :param image:
+        """
         check_sizes(top_left, bottom_right)
         self.coordinates = [[top_left[0], top_left[1]], [bottom_right[0], bottom_right[1]]]
 
@@ -27,7 +34,10 @@ class ImageCondition:
         self.image = np.array(self.image)
         self.image_pixmap = QPixmap.fromImage(image_qt)
 
-        self.threshold = threshold_calculation(self.image)
+        # This is *very* arbitrary, it comes from looking at MSE readouts,
+        # then testing equations on Desmos to get to what seemed like a reasonable range (0 to 14)
+        # within the allowed percentages (0 to 20%)
+        self.threshold = round((threshold_modifier * .01)**.9 * 60, 4)
 
     def run(self):
         """
@@ -88,15 +98,13 @@ class ImageConditionUI(QtWidgets.QWidget):
         self.main_app = main_app
         self.init_ui()
 
-    def init_ui(self):
+    def init_ui(self):  # Maybe in the future make the sc be a popup, as this is running out of room rn
         """
         Initializes the UI
         """
         self.layout = QVBoxLayout(self)
-        self.label = QLabel("Configure image")
-        self.layout.addWidget(self.label)
 
-        self.present_absent_label = QLabel("Select Click Type:")
+        self.present_absent_label = QLabel("Should the image be present or absent?")
         self.layout.addWidget(self.present_absent_label)
         self.present_absent_combo = QComboBox()
         self.present_absent_combo.addItems(["Present", "Absent"])
@@ -120,6 +128,33 @@ class ImageConditionUI(QtWidgets.QWidget):
 
         self.captured_image_display = QLabel("No image captured")
         self.layout.addWidget(self.captured_image_display)
+
+        error_label = QLabel("What percentage error should there be?")
+        self.layout.addWidget(error_label)
+
+        error_slider_widget = QWidget()
+        error_widget_layout = QVBoxLayout()
+        error_slider_widget.setLayout(error_widget_layout)
+        slider_layout = QHBoxLayout()
+
+        self.error_slider = QSlider(Qt.Orientation.Horizontal, self)
+        self.error_slider.setMinimum(0)
+        self.error_slider.setMaximum(20)
+        self.error_slider.setValue(7)
+        self.error_slider.valueChanged.connect(self.update_error_label)
+
+        slider_minimum_label = QLabel(str(self.error_slider.minimum()) + "%")
+        slider_maximum_label = QLabel(str(self.error_slider.maximum()) + "%")
+
+        self.error_percent_label = QLabel(str(self.error_slider.value()) + "% error")
+        error_widget_layout.addWidget(self.error_percent_label)
+
+        slider_layout.addWidget(slider_minimum_label)
+        slider_layout.addWidget(self.error_slider)
+        slider_layout.addWidget(slider_maximum_label)
+        error_widget_layout.addLayout(slider_layout)
+
+        self.layout.addWidget(error_slider_widget)
 
         self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(self.save_action)
@@ -174,6 +209,9 @@ class ImageConditionUI(QtWidgets.QWidget):
 
         return super(ImageConditionUI, self).eventFilter(source, event)
 
+    def update_error_label(self):
+        self.error_percent_label.setText(str(self.error_slider.value()) + "% error")
+
     def save_action(self):
         """
         For when save is pressed. Creates a new Image object from the pre-established coordinates and image, and
@@ -189,6 +227,6 @@ class ImageConditionUI(QtWidgets.QWidget):
         present_or_not = self.present_absent_combo.currentText().lower()[0]
         if top_left and bottom_right and image:
             check_sizes(top_left, bottom_right)
-            condition = ImageCondition(top_left, bottom_right, image)
+            condition = ImageCondition(top_left, bottom_right, image, self.error_slider.value())
             self.main_app.add_condition(condition, present_or_not)
             self.main_app.switch_to_main_view()

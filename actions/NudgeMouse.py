@@ -1,40 +1,52 @@
 from actions.action import Action
 from actions.mouse_shortcuts import set_click_type
 
-from pynput.mouse import Controller, Button
+from pynput.mouse import Controller
 from PyQt6.QtWidgets import QVBoxLayout, QLabel, QComboBox, QPushButton, QLineEdit, QWidget
 
 
 class NudgeMouse(Action):
     def __init__(self, increment, click_type):
+        """
+        Initializes NudgeMouse. Increment is how much the mouse should be moved by, click is a String representation
+        of what click should be performed (if any), and click_type is the click in pynput form (if any)
+        :param increment: An array, in the form [x, y] (must be ints)
+        :param click_type: A string, to not return None, must be either "left", "right", or "middle" (or l / r / m)
+        """
         self.increment = increment
         self.click, self.click_type = set_click_type(click_type)
 
     def __str__(self):
+        """
+        Returns a String saying how much the mouse should move, and if it is holding down click or not
+        (and what type of click that is)
+        """
+        x_move = str(abs(self.increment[0]))
+        y_move = str(abs(self.increment[1]))
+
+        x_dir = "right" if self.increment[0] > 0 else "left"
+        y_dir = "up" if self.increment[1] < 0 else "down"  # Have to reflip it here
+
         return_string = "Moving the mouse "
 
         if self.increment[1] != 0:
-            if self.increment[0] > 0:
-                return_string = return_string + str(self.increment[0]) + " pixels right and "
-            elif self.increment[0] < 0:
-                return_string = return_string + str(-self.increment[0]) + " pixels left and "
-            if self.increment[1] < 0:  # Pynput considers 0 to be the top of the screen, so increment must be negative
-                return_string = return_string + str(-self.increment[1]) + " pixels up"  # to move up
+            if self.increment[0] != 0:
+                return_string += x_move + " pixels " + x_dir + " and " + y_move + " pixels " + y_dir
             else:
-                return_string = return_string + str(self.increment[1]) + " pixels down"
-
+                return_string += y_move + " pixels " + y_dir
         else:
-            if self.increment[0] > 0:
-                return_string = return_string + str(self.increment[0]) + " pixels right"
-            else:
-                return_string = return_string + str(-self.increment[0]) + " pixels left"
+            return_string += x_move + " pixels " + x_dir
 
         if self.click:
-            return_string = return_string + " while " + self.click.lower() + " clicking"
+            return_string += " while " + self.click.lower() + " clicking"
 
         return return_string
 
     def run(self):
+        """
+        Moves the mouse a number of pixels in the x and y directions, as specified in self.increment.
+        Can also hold down left, right or middle click during this time as specified by self.click_type
+        """
         if self.click_type:
             Controller().press(self.click_type)
             Controller().position = (self.increment[0] + Controller().position[0],
@@ -44,8 +56,14 @@ class NudgeMouse(Action):
             Controller().position = (self.increment[0] + Controller().position[0],
                                      self.increment[1] + Controller().position[1])
 
-    def update_fields(self, increment, click_held):
-        self.__init__(increment, click_held)
+    def update_fields(self, increment, click_type):
+        """
+        Updates the increment and click_type instance variables as specified by the data passed in
+        :param increment: An array, in the form [x, y] (must be ints)
+        :param click_type: A string, to not return None, must be either "left", "right", or "middle" (or l / r / m)
+
+        """
+        self.__init__(increment, click_type)
 
 
 class NudgeMouseUI(QWidget):
@@ -122,6 +140,10 @@ class NudgeMouseUI(QWidget):
         self.layout.addWidget(back_button)
 
     def switch_held_choice(self):
+        """
+        If the user switches the hold_mouse_box to say that they want a click to be held, makes the option to set
+        a click (and the prompt) appear. If they say they don't want a click, it instead hides the box and label
+        """
         if self.hold_mouse_box.currentText() == "No":
             self.click_type_label.hide()
             self.click_type_combo.hide()
@@ -131,8 +153,8 @@ class NudgeMouseUI(QWidget):
 
     def save_action(self, nudge_mouse_to_edit):
         """
-        If coordinates exist, this creates a NudgeMouse object using self.coordinates, and returns it
-         to UI3's action list. If coordinates is None, nothing happens
+        If coordinates exist, this creates a NudgeMouse object using self.coordinates,
+        and returns it to UI3's action list. If coordinates is None, nothing happens
         """
         x = self.x_axis_text_input.text()
         y = self.y_axis_text_input.text()
@@ -141,8 +163,8 @@ class NudgeMouseUI(QWidget):
         except ValueError:
             x = 0
         try:
-            y = -int(y)  # Pynput considers 0 as the top of the screen, which isn't intuitive, so flipping it here
-        except ValueError:  # to make it more logical for the user
+            y = -int(y)  # Pynput considers 0 as the top of the screen, which isn't intuitive, while a normal
+        except ValueError:  # user would most likely consider positive to be up, so it has to be flipped here
             y = 0
 
         if x != 0 or y != 0:
@@ -159,4 +181,3 @@ class NudgeMouseUI(QWidget):
                     action = NudgeMouse([x, y], None)
                 self.main_app.add_action(action)
         self.main_app.switch_to_main_view()
-

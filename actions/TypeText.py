@@ -62,6 +62,10 @@ class TypeText(Action):
         return "Typing " + ", ".join(map(str, self.series))
 
     def update_fields(self, phrase):
+        """
+        Sets a new string to be the phrase to be used for the TypeText action
+        :param phrase: A string. + denotes a special key
+        """
         self.__init__(phrase)
 
     def setup_series(self, phrase):

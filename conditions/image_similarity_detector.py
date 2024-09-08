@@ -49,17 +49,6 @@ def get_image(coordinates, not_numpy=None):
     return screenshot
 
 
-def threshold_calculation(image):
-    """
-    Calculates the threshold of acceptable error for any image passed in. This is based on the width and height of the
-    image, with a smaller image will have a smaller threshold.
-    :param image: A numpy array of an image. To be used to calculate the threshold
-    :return: Float, the maximum error threshold based on the dimensions of the image
-    """
-    width, height = image.shape[:2]
-    return ((width * height) / 2) ** .15  # This is a semi-arbitrary equation that gave a reasonable seeming value
-
-
 def compare_images(reference_image, coordinates, threshold):
     """
     Compares two images, returns True if the difference between them is below the given threshold.

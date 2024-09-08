@@ -47,6 +47,12 @@ def check_valid_input(coordinates):
 
 
 def create_macro_list(macro_list):
+    """
+    Takes a QComboBox of the possible macros, and adds all of them to a new QComboBox,
+    up until it says "Create a macro", where it is then returned
+    :param macro_list: A QComboBox. Must have an index which says "Create a macro"
+    :return: A QComboBox of items up to Create a macro
+    """
     i = 0
     macro_to_remove_box = QComboBox()
     while macro_list.itemText(i) != "Create a macro":
@@ -56,6 +62,12 @@ def create_macro_list(macro_list):
 
 
 def set_click_type(click_type_string):
+    """
+    Takes a string in, processes if it is for a left, right or middle click and returns a string of that type,
+    alongside the pynput form (Key.something). If the input isn't valid, None is returned for both
+    :param click_type_string: A String, should be left, right or middle / l, r, m to get something other than None
+    :return: A String representation of the click, then the click in pynput form
+    """
     print(click_type_string)
     if click_type_string:
         click_type_string = click_type_string.lower()

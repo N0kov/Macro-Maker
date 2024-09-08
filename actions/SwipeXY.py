@@ -19,10 +19,19 @@ except AttributeError:
 
 class SwipeXY(Action):
     def __init__(self, start, end):
+        """
+        Sets initial and final coordinates for the swipe action. Must be in the form [x, y] or (x, y). If one
+        or both are valid, it will be set to (0, 0) instead
+        :param start: A list in the form [int(x), int(y)]. Where the mouse should start
+        :param end: A list in the form [int(x), int(y)]. Where the mouse should end
+        """
         self.start = check_valid_input(start)
         self.end = check_valid_input(end)
 
     def run(self):
+        """
+        Swipes the mouse between the start and end positions, with left click held down
+        """
         move_between(self.start, self.end)
 
     def __str__(self):
@@ -33,6 +42,11 @@ class SwipeXY(Action):
                 ", " + str(self.end[1]) + ")")
 
     def update_fields(self, start, end):
+        """
+        Sets new start and end fields
+        :param start: A list in the form [int(x), int(y)]. Where the mouse should start
+        :param end: A list in the form [int(x), int(y)]. Where the mouse should end
+        """
         self.__init__(start, end)
 
 
@@ -107,6 +121,11 @@ class SwipeXyUI(QtWidgets.QWidget):
         return super(SwipeXyUI, self).eventFilter(source, event)
 
     def save_action(self, swipe_xy_to_edit):
+        """
+        Saves the SwipeXY, as long as the user has given initial and final coordinates. Otherwise, it
+        returns to the main screen, saving nothing. This can be used to edit a SwipeXY if one is passed
+        in, or create a new one and return it to the parent app's action list
+        """
         initial_coordinates = self.initial_coordinates
         final_coordinates = self.final_coordinates
         if initial_coordinates and final_coordinates:

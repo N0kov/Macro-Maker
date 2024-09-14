@@ -6,12 +6,15 @@ from misc_utilities.CustomDraggableList import CustomDraggableList
 
 
 class AdvancedActions(QtWidgets.QWidget):
+    """
+    The window for AdvancedActions
+    """
     def __init__(self, main_app, current_setup):
         super(AdvancedActions, self).__init__()
         self.main_app = main_app
 
         self.actions = []
-        self.current_macro = 0  # Purely here for compatibility with CustomDraggableList
+        self.current_macro = 0  # Solely here for compatibility with CustomDraggableList
 
         self.macro_list = self.main_app.macro_list
 

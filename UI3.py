@@ -1,9 +1,7 @@
 import _pickle
 import pickle
 import queue
-import sys
 import threading
-import traceback
 import sys
 
 import inflect
@@ -35,6 +33,8 @@ class MacroManagerMain(QMainWindow):
         self.macros_to_run = queue.Queue()
         self.mutex = threading.Lock()
         self.current_running_macro = 0
+        # This one is so weighty that it needs this so that the delay isn't too bad on going to the view
+        self.image_config_view = ImageConditionUI(self)
 
         self.start_hotkey_listener()  # Thread stuff - checking for the hotkey to run your script
         self.run_action_condition = threading.Condition()  # Notification for the thread that runs the macro
@@ -132,19 +132,7 @@ class MacroManagerMain(QMainWindow):
 
         actions_layout.addWidget(self.meta_modifier_widget)
 
-        plus_button_stylesheet = ("""
-        QPushButton {
-            border-radius: 20px;
-            background-color: #007bff;
-            color: white;
-            font-family: Arial;
-            font-size: 30px;
-        }
-        """)
-
-        add_action_button = QPushButton("+")
-        add_action_button.setFixedSize(40, 40)
-        add_action_button.setStyleSheet(plus_button_stylesheet)
+        add_action_button = create_push_button()
         add_action_button.clicked.connect(lambda: self.switch_to_add_action_view("main_app"))
         actions_layout.addWidget(add_action_button, alignment=QtCore.Qt.AlignmentFlag.AlignRight |
                                                               QtCore.Qt.AlignmentFlag.AlignBottom)
@@ -201,9 +189,7 @@ class MacroManagerMain(QMainWindow):
         absent_widget.setLayout(absent_container)
         conditions_layout.addWidget(absent_widget)
 
-        condition_button = QPushButton("+")
-        condition_button.setFixedSize(40, 40)
-        condition_button.setStyleSheet(plus_button_stylesheet)
+        condition_button = create_push_button()
         condition_button.clicked.connect(self.switch_to_add_condition_view)
 
         hbox_to_move_plus_button_left = QHBoxLayout()
@@ -723,7 +709,6 @@ class MacroManagerMain(QMainWindow):
         This switches the UI to the ImageCondition Class for the user to make a condition, before returning to the
         main UI
         """
-        self.image_config_view = ImageConditionUI(self)
         self.central_widget.addWidget(self.image_config_view)
         self.central_widget.setCurrentWidget(self.image_config_view)
 

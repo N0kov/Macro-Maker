@@ -90,7 +90,7 @@ class TypeText(Action):
         of self.series. The enum keys are moved because modifier keys must be hit first (e.g. v then control would
         not paste anything)
         """
-        no_move = [Key.up, Key.right, Key.down, Key.left, Key.tab, Key.delete, Key.backspace]
+        no_move = [Key.up, Key.right, Key.down, Key.left, Key.tab, Key.delete, Key.backspace, Key.enter]
         temp_series = [] + self.series
         self.series.clear()
 

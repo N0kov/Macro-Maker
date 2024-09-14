@@ -1,7 +1,9 @@
-from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QHBoxLayout, QLabel, QPushButton
+from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox
 from PyQt6 import QtCore
 from PyQt6.QtCore import Qt
 import inflect
+from misc_utilities.UI_helper import create_macro_list_names
+from misc_utilities.special_keys import special_keys
 
 
 class HotkeyPopup(QDialog):
@@ -9,11 +11,13 @@ class HotkeyPopup(QDialog):
     The popup for changing the start / stop hotkey. Captures the user's input and displays it to them. Returns to UI3
     after
     """
-    def __init__(self, hotkey, all_hotkeys, parent=None):
+
+    def __init__(self, hotkey, all_hotkeys, break_key, macro_list, current_macro, parent=None):
         """
         Initializes the popup, and creates the buttons and labels. Sets the initial hotkey to be the passed in hotkey
         :param hotkey: The hotkey in the given list that is in use
         :param all_hotkeys: All hotkeys currently in use. Must be a list
+        :break_key: The current key to kill all macros. Must be a string
         :param parent: The parent widget. Defaults to None
         """
         super().__init__(parent)
@@ -28,6 +32,8 @@ class HotkeyPopup(QDialog):
         self.label = QLabel("Press start to record a hotkey")
         layout.addWidget(self.label)
 
+        layout.addSpacing(5)
+
         horizontal_layout = QHBoxLayout()
 
         self.start_button = QPushButton("Start", self)
@@ -38,6 +44,8 @@ class HotkeyPopup(QDialog):
         self.key_combination = all_hotkeys[hotkey]
         self.old_hotkey = all_hotkeys[hotkey]
         self.bad_hotkeys = all_hotkeys[:hotkey] + [""] + all_hotkeys[hotkey+1:]
+        self.break_key = break_key
+        self.macro_index = current_macro
 
         self.hotkey_display = QLabel(str(self.key_combination))
         self.hotkey_display.setFixedHeight(50)
@@ -45,14 +53,22 @@ class HotkeyPopup(QDialog):
         horizontal_layout.addWidget(self.hotkey_display)
 
         layout.addLayout(horizontal_layout)
-        layout.addSpacing(20)
+        layout.addSpacing(5)
+
+        self.hotkey_location = QComboBox()
+        self.hotkey_location.addItems(["Universal break key"] + create_macro_list_names(macro_list))
+        self.hotkey_location.setCurrentIndex(current_macro + 1)
+        self.hotkey_location.currentIndexChanged.connect(lambda: self.hotkey_location_changed(all_hotkeys))
+        layout.addWidget(self.hotkey_location)
+
+        layout.addSpacing(15)
 
         remove_hotkey = QPushButton("Remove Hotkey")
 
         button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel, self)
         button_box.addButton(remove_hotkey, QDialogButtonBox.ButtonRole.ActionRole)
 
-        button_box.accepted.connect(self.accept)
+        button_box.accepted.connect(self.save_hotkey)
         button_box.rejected.connect(self.reject_with_old_hotkey)
         remove_hotkey.clicked.connect(self.close_without_hotkey)
 
@@ -93,22 +109,8 @@ class HotkeyPopup(QDialog):
         """
         self.recording = False
         self.start_button.setEnabled(True)
-        self.label.setText("Press start to record a new hotkey")
         self.start_button.setText("Start")
-        if self.key_combination:
-            if self.key_combination[-1] not in self.bad_hotkeys:
-                self.hotkey_display.setText(str(self.key_combination[-1]))
-            else:
-                self.label.setText("Macro " + inflect.engine().number_to_words(self.bad_hotkeys.index(
-                                                                               self.key_combination[0]) + 1) +
-                                   " is already using " + str(self.key_combination[0]) +
-                                   "\n\n" + self.label.text() + "\n")
-
-                self.key_combination = ""
-                self.hotkey_display.setText("No hotkey")
-
-        else:
-            self.hotkey_display.setText("No hotkey")
+        self.update_hotkey_display()
         self.releaseKeyboard()
 
     def keyPressEvent(self, event):
@@ -120,50 +122,6 @@ class HotkeyPopup(QDialog):
         """
         if self.recording:
             key = event.key()
-
-            special_keys = {  # This is awful but event.key() doesn't seem to natively process to strings nicely so
-                Qt.Key.Key_Shift: 'shift',  # this is used
-                Qt.Key.Key_Control: 'ctrl',
-                Qt.Key.Key_Alt: 'alt',
-                Qt.Key.Key_Left: 'left',
-                Qt.Key.Key_Up: 'up',
-                Qt.Key.Key_Right: 'right',
-                Qt.Key.Key_Down: 'down',
-                Qt.Key.Key_Space: 'space',
-                Qt.Key.Key_Enter: 'enter',
-                Qt.Key.Key_Return: 'return',
-                Qt.Key.Key_Backspace: 'backspace',
-                Qt.Key.Key_Tab: 'tab',
-                Qt.Key.Key_Escape: 'escape',
-                Qt.Key.Key_F1: 'f1',
-                Qt.Key.Key_F2: 'f2',
-                Qt.Key.Key_F3: 'f3',
-                Qt.Key.Key_F4: 'f4',
-                Qt.Key.Key_F5: 'f5',
-                Qt.Key.Key_F6: 'f6',
-                Qt.Key.Key_F7: 'f7',
-                Qt.Key.Key_F8: 'f8',
-                Qt.Key.Key_F9: 'f9',
-                Qt.Key.Key_F10: 'f10',
-                Qt.Key.Key_F11: 'f11',
-                Qt.Key.Key_F12: 'f2',
-                Qt.Key.Key_Insert: 'insert',
-                Qt.Key.Key_Delete: 'delete',
-                Qt.Key.Key_Home: 'home',
-                Qt.Key.Key_End: 'end',
-                Qt.Key.Key_PageUp: 'page_up',
-                Qt.Key.Key_PageDown: 'page_down',
-                Qt.Key.Key_CapsLock: 'caps_lock',
-                Qt.Key.Key_NumLock: 'num_lock',
-                Qt.Key.Key_ScrollLock: 'scroll_lock',
-                Qt.Key.Key_Pause: 'pause',
-                Qt.Key.Key_Print: 'print_screen',
-                Qt.Key.Key_Menu: 'menu',
-                Qt.Key.Key_Super_L: 'cmd_l',
-                Qt.Key.Key_Super_R: 'cmd_r',
-                Qt.Key.Key_Clear: 'clear'
-            }
-
             key_name = None
 
             if key in special_keys:
@@ -197,10 +155,79 @@ class HotkeyPopup(QDialog):
             self.recording = False
             self.stop_recording()
 
+    def update_hotkey_display(self):
+        """
+        Updates the hotkey display. If key combination is empty, it prompts the user to record a hotkey, and
+        labels the hotkey display as "No hotkey". If it matches a prexesting hotkey it notifies the user, clears
+        the hotkey and prompts the user for a new hotkey. Otherwise, it sets the hotkey display to be the current
+        text
+        """
+        self.label.setText("Press start to record a hotkey")
+        if type(self.key_combination) is list:
+            text = self.key_combination[-1]
+        else:
+            text = self.key_combination
+        if text != "":
+            if text in self.bad_hotkeys and self.key_combination:
+                self.label.setText("Macro " + inflect.engine().number_to_words(self.bad_hotkeys.index(
+                    text) + 1) + " is already using " + text +
+                   "\n" + self.label.text())
+
+                self.key_combination = ""
+                self.hotkey_display.setText("No hotkey")
+
+            elif text == self.break_key and self.hotkey_location.currentIndex() != 0:
+                self.label.setText("The break key is already using " + self.break_key + "\n" + self.label.text())
+                self.key_combination = ""
+                self.hotkey_display.setText("No hotkey")
+
+            else:
+                self.hotkey_display.setText(text)
+
+    def hotkey_location_changed(self, all_hotkeys):
+        """
+        Switches the UI to be based around the hotkey of the option that's currently selected, and updates
+        it in case of any issues. Sets the key combination to that of the current macro if there currently isn't one
+        """
+        self.bad_hotkeys = all_hotkeys
+        new_index = self.hotkey_location.currentIndex()
+        if new_index == 0:
+            self.old_hotkey = None
+        else:
+            self.old_hotkey = all_hotkeys[new_index - 1]
+            self.bad_hotkeys = all_hotkeys[:new_index - 1] + [""] + all_hotkeys[new_index:]
+        self.update_hotkey_display()
+        if self.key_combination == "":
+            if new_index == 0 and self.break_key != "":
+                self.key_combination = self.break_key
+            elif all_hotkeys[new_index - 1] != "":
+                self.key_combination = all_hotkeys[new_index - 1]
+            else:
+                return
+            self.update_hotkey_display()
+
     def reject_with_old_hotkey(self):
+        """
+        Sets the key combination to the old hotkey, then closes the window
+        """
         self.key_combination = self.old_hotkey
         self.reject()
 
     def close_without_hotkey(self):
-        self.key_combination = []
+        """
+        Sets the key combination to be nothing, then closes the window
+        """
+        self.key_combination = ""
+        self.accept()
+
+    def save_hotkey(self):
+        """
+        If the key combination is a list, turns it into a string. From there, it closes the window
+        """
+        try:
+            if list is type(self.key_combination):
+                self.key_combination = self.key_combination[0]
+        except (AttributeError, IndexError):
+            pass
+
         self.accept()

@@ -1,5 +1,5 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QListWidgetItem, QMenu, QPushButton
+from PyQt6.QtWidgets import QListWidgetItem, QMenu, QPushButton, QComboBox
 from copy import deepcopy
 
 from actions import *
@@ -122,3 +122,26 @@ def create_push_button():
     add_action_button.setFixedSize(40, 40)
     add_action_button.setStyleSheet(plus_button_stylesheet)
     return add_action_button
+
+
+def create_macro_list(macro_list):
+    """
+    Takes a QComboBox of the possible macros, and adds all of them to a new QComboBox,
+    up until it says "Create a macro", where it is then returned
+    :param macro_list: A QComboBox. Must have an index which says "Create a macro"
+    :return: A QComboBox of items up to Create a macro
+    """
+    macro_to_remove_box = QComboBox()
+    macro_to_remove_box.addItems(create_macro_list_names(macro_list))
+    return macro_to_remove_box
+
+
+def create_macro_list_names(macro_list, remove_index=None):
+    i = 0
+    macro_names = []
+    while macro_list.itemText(i) != "Create a macro":
+        macro_names.append(macro_list.itemText(i))
+        i += 1
+    if remove_index is not None:
+        macro_names.pop(remove_index)
+    return macro_names

@@ -1,5 +1,5 @@
 from actions.action import Action
-from actions.mouse_shortcuts import create_macro_list
+from misc_utilities.UI_helper import create_macro_list
 from misc_utilities.listener import trigger_by_index
 
 from PyQt6 import QtWidgets

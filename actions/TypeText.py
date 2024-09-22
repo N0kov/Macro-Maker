@@ -56,14 +56,16 @@ class TypeText(Action):
 
     def __str__(self):
         """
-        Returns a string representation of the TypeText object in the form "Typing [text here]". Text for example will
-        look like: h, e, l, l, o,  , Key.something
+        Returns a string representation of the TypeText object in the form "Typing [text here]".
+        Text for example will look like: h, e, l, l, o,  , Key.something
         """
-        if self.series:
-            return "Typing: " + ", ".join(map(str, self.series))
-        return ""
+        return "Typing " + ", ".join(map(str, self.series))
 
     def update_fields(self, phrase):
+        """
+        Sets a new string to be the phrase to be used for the TypeText action
+        :param phrase: A string. + denotes a special key
+        """
         self.__init__(phrase)
 
     def setup_series(self, phrase):
@@ -88,7 +90,7 @@ class TypeText(Action):
         of self.series. The enum keys are moved because modifier keys must be hit first (e.g. v then control would
         not paste anything)
         """
-        no_move = [Key.up, Key.right, Key.down, Key.left, Key.tab, Key.delete, Key.backspace]
+        no_move = [Key.up, Key.right, Key.down, Key.left, Key.tab, Key.delete, Key.backspace, Key.enter]
         temp_series = [] + self.series
         self.series.clear()
 
@@ -168,7 +170,7 @@ class TypeTextUI(QtWidgets.QWidget):
         if type_text_to_edit:
             type_text_to_edit.update_fields(phrase)
             self.main_app.update_action_list()
-        else:
+        elif phrase != "":
             action = TypeText(phrase)
             self.main_app.add_action(action)
         self.main_app.switch_to_main_view()

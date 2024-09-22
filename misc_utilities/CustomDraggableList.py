@@ -4,7 +4,18 @@ from misc_utilities import UI_helper
 
 
 class CustomDraggableList(QListWidget):
+    """
+    A QListWidget that comes with functions to be able to drag items around and update their associated lists
+    (responsible for the items in the QListWidget), and right click on them, allowing copying, deletion and
+    editing of the items inside, while also updating their base lists
+    """
+
     def __init__(self, main_application, source_list):
+        """
+        Sets the functionality for the list, adds the connections on clicking and dragging / dropping
+        :param main_application: The parent application of the QListWidget
+        :param source_list: The list that's responsible for creating the elements of the QListWidget
+        """
         super().__init__()
 
         self.main_application = main_application

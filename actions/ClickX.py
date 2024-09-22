@@ -2,6 +2,7 @@ from PyQt6 import QtCore, QtWidgets
 from PyQt6.QtWidgets import QVBoxLayout, QLabel, QComboBox, QPushButton
 from pynput.mouse import Button, Controller
 from actions.action import Action
+from actions.mouse_shortcuts import set_click_type
 
 # Windows has DPI scaling issues, so if on Windows these global flags need to be set. if os.name == 'nt'
 # should check for Windows and only be True there, but as windll doesn't exist anywhere else, the
@@ -29,15 +30,7 @@ class ClickX(Action):
         :param click_type: String, the type of click. Defaults to left, but can be for right or middle
         """
         self.coordinates = coordinates
-
-        self.click = "Left"  # The default for if the click isn't passed in correctly
-        self.click_type = Button.left
-        if click_type in ("r", "right"):
-            self.click_type = Button.right
-            self.click = "Right"
-        elif click_type in ("m", "middle"):
-            self.click_type = Button.middle
-            self.click = "Middle"
+        self.click, self.click_type = set_click_type(click_type)
 
     def run(self):
         """

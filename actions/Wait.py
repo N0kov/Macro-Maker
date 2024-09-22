@@ -14,7 +14,7 @@ class Wait(Action):
         """
         Creates a variable and sets it equal to the passed in wait_time. If this isn't a float greater than or
         equal to zero, the var is instead set to zero
-        :param wait_time:
+        :param wait_time: float, the amount of time that should be elapsed before the next Action can happen
         """
         if not check_number_validity(wait_time):
             wait_time = 0
@@ -33,6 +33,10 @@ class Wait(Action):
         sleep(self.wait_time)
 
     def update_fields(self, wait_time):
+        """
+        Updates the Wait Action to have a new time to wait
+        :param wait_time: float, the amount of time that should be elapsed before the next Action can happen
+        """
         self.__init__(wait_time)
 
 

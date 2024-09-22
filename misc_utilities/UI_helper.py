@@ -1,5 +1,5 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QListWidgetItem, QMenu
+from PyQt6.QtWidgets import QListWidgetItem, QMenu, QPushButton, QComboBox
 from copy import deepcopy
 
 from actions import *
@@ -22,33 +22,45 @@ def right_click_actions_menu(position, source):
     selected_action = menu.exec(global_position)
     item = sender.itemAt(position)
     if item is not None:
-        item = item.data(Qt.ItemDataRole.UserRole)
+        item_data = item.data(Qt.ItemDataRole.UserRole)
 
         if selected_action == remove_item:
-            copy_or_remove_item(source, item, "remove")
+            copy_or_remove_item(source, sender.row(item), "pop")
 
         elif selected_action == copy_item:
-            copy_or_remove_item(source, item, "append")
+            copy_or_remove_item(source, item_data, "append")
 
         elif selected_action == edit_the_item:
-            edit_item(item, source)
+            edit_item(item_data, source)
 
         source.update_action_list()
 
 
 def copy_or_remove_item(source, item, choice):
+    """
+    Calls the desired method (either append or remove) on the passed in list using the specified item. Does
+    nothing if choice is not append or remove
+    :param source: The list to be edited - list
+    :param item: The item to be copied / removed - anything
+    :param choice: What the user wants to do - String
+    """
     # There are three different things tried here for copy and remove as there are three different possible data
     # types that could be passed in. See dropEvent from CustomDraggableList for a full explanation
-    if choice == "append":
-        item = deepcopy(item)
-    try:
-        if source.source_list is source.main_application.advanced_actions:
-            method = getattr(source.source_list[source.main_application.current_macro][1], choice)
-        else:
-            method = getattr(source.source_list[source.main_application.current_macro], choice)
-    except AttributeError:
-        method = getattr(source.source_list[0], choice)
-    method(item)
+    if choice == "append" or choice == "pop":
+        if choice == "append":
+            item = deepcopy(item)
+        try:
+            if source.source_list is source.main_application.advanced_actions:
+                method = getattr(source.source_list[source.main_application.current_macro][1], choice)
+            else:
+                method = getattr(source.source_list[source.main_application.current_macro], choice)
+        except AttributeError:
+            method = getattr(source.source_list[0], choice)
+        except ValueError:
+            return
+        method(item)
+    else:
+        pass
 
 
 def edit_item(item, source):
@@ -79,6 +91,8 @@ def call_ui_with_params(source, item):
         edit_view = TypeTextUI(source, item)
     elif isinstance(item, Wait):
         edit_view = WaitUI(source, item)
+    elif isinstance(item, NudgeMouse):
+        edit_view = NudgeMouseUI(source, item)
     elif isinstance(item, TriggerMacro):
         edit_view = TriggerMacroUI(source, source.get_macro_list(), item)
     else:
@@ -91,3 +105,43 @@ def call_ui_with_params(source, item):
     except AttributeError:
         source.main_application.main_app.central_widget.addWidget(edit_view)
         source.main_application.main_app.central_widget.setCurrentWidget(edit_view)
+
+
+def create_push_button():
+    plus_button_stylesheet = ("""
+    QPushButton {
+        border-radius: 20px;
+        background-color: #007bff;
+        color: white;
+        font-family: Arial;
+        font-size: 30px;
+    }
+    """)
+
+    add_action_button = QPushButton("+")
+    add_action_button.setFixedSize(40, 40)
+    add_action_button.setStyleSheet(plus_button_stylesheet)
+    return add_action_button
+
+
+def create_macro_list(macro_list):
+    """
+    Takes a QComboBox of the possible macros, and adds all of them to a new QComboBox,
+    up until it says "Create a macro", where it is then returned
+    :param macro_list: A QComboBox. Must have an index which says "Create a macro"
+    :return: A QComboBox of items up to Create a macro
+    """
+    macro_to_remove_box = QComboBox()
+    macro_to_remove_box.addItems(create_macro_list_names(macro_list))
+    return macro_to_remove_box
+
+
+def create_macro_list_names(macro_list, remove_index=None):
+    i = 0
+    macro_names = []
+    while macro_list.itemText(i) != "Create a macro":
+        macro_names.append(macro_list.itemText(i))
+        i += 1
+    if remove_index is not None:
+        macro_names.pop(remove_index)
+    return macro_names

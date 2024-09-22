@@ -5,7 +5,9 @@ from .TypeText import TypeText, TypeTextUI
 from .Wait import Wait, WaitUI
 from .TriggerMacro import TriggerMacro, TriggerMacroUI
 from .RecordMousePosition import RecordMousePosition, RecordMousePositionUI
+from .NudgeMouse import NudgeMouse, NudgeMouseUI
 
 
-__all__ = ["ClickX", "MouseTo", "RecordMousePosition", "SwipeXY", "TriggerMacro", "TypeText", "Wait",
-           "ClickXUI", "MouseToUI", "RecordMousePositionUI", "SwipeXyUI", "TriggerMacroUI", "TypeTextUI", "WaitUI"]
+__all__ = ["ClickX", "MouseTo", "NudgeMouse", "RecordMousePosition", "SwipeXY", "TriggerMacro", "TypeText", "Wait",
+           "ClickXUI", "MouseToUI", "NudgeMouseUI", "RecordMousePositionUI",
+           "SwipeXyUI", "TriggerMacroUI", "TypeTextUI", "WaitUI"]

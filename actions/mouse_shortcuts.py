@@ -1,6 +1,5 @@
 from pynput.mouse import Button, Controller
 from time import sleep
-from PyQt6.QtWidgets import QComboBox
 
 mouse = Controller()
 
@@ -46,10 +45,27 @@ def check_valid_input(coordinates):
         return [0, 0]  # In case bad data gets passed in
 
 
-def create_macro_list(macro_list):
-    i = 0
-    macro_to_remove_box = QComboBox()
-    while macro_list.itemText(i) != "Create a macro":
-        macro_to_remove_box.addItem(macro_list.itemText(i))
-        i += 1
-    return macro_to_remove_box
+def set_click_type(click_type_string):
+    """
+    Takes a string in, processes if it is for a left, right or middle click and returns a string of that type,
+    alongside the pynput form (Key.something). If the input isn't valid, None is returned for both
+    :param click_type_string: A String, should be left, right or middle / l, r, m to get something other than None
+    :return: A String representation of the click, then the click in pynput form
+    """
+    print(click_type_string)
+    if click_type_string:
+        click_type_string = click_type_string.lower()
+        if click_type_string in ("l", "left"):
+            click = "Left"
+            click_type = Button.left
+        elif click_type_string in ("r", "right"):
+            click_type = Button.right
+            click = "Right"
+        else:
+            click_type = Button.middle
+            click = "Middle"
+    else:
+        click_type = None
+        click = None
+
+    return click, click_type

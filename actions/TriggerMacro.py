@@ -1,5 +1,5 @@
 from actions.action import Action
-from actions.mouse_shortcuts import create_macro_list
+from misc_utilities.UI_helper import create_macro_list
 from misc_utilities.listener import trigger_by_index
 
 from PyQt6 import QtWidgets
@@ -8,23 +8,51 @@ from PyQt6.QtWidgets import QVBoxLayout, QLabel, QPushButton
 
 class TriggerMacro(Action):
     def __init__(self, macro_index, macro_name):
+        """
+        Initializes TriggerMacro, sets the index macro that should be triggered,
+        alongside the name of the macro
+        :param macro_index: The index (int) of the macro to be triggered
+        :param macro_name: The name (String) of the macro to be triggered
+        """
         self.macro_index = macro_index
         self.macro_name = macro_name
 
     def __str__(self):
+        """
+        Returns "Triggering" followed by the name of the macro
+        """
         return "Triggering " + str(self.macro_name)
 
     def run(self):
+        """
+        Triggers the macro that corresponds to the index in UI3's macro list
+        """
         trigger_by_index(self.macro_index)
 
     def update_fields(self, alter_distance, new_macro_name):
+        """
+        Sets a new name, and adjusts macro_index by whatever the user passed in
+        :param alter_distance: The amount that the macro index should be increased / decreased by (int)
+        :param new_macro_name: The new name for the macro
+        """
         self.macro_index = alter_distance + self.macro_index
         self.macro_name = new_macro_name
 
     def reset_fields(self, macro_index, macro_name):
-        self.__init__(macro_index, macro_name)
+        """
+        Sets TriggerMacro to have a new name and index
+        :param macro_index: The index (int) of the macro to be triggered
+        :param macro_name: The name (String) of the macro to be triggered
+        """
+        self.macro_index = macro_index
+        self.macro_name = macro_name
 
+    @property
     def get_index(self):
+        """
+        Returns the index stored in macro_index
+        :return: self.macro_index
+        """
         return self.macro_index
 
 

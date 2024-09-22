@@ -117,6 +117,7 @@ class MouseToUI(QtWidgets.QWidget):
         if coordinates:
             if mouse_to_edit:
                 mouse_to_edit.update_fields(coordinates)
+
                 self.main_app.update_action_list()
             else:
                 action = MouseTo(coordinates)

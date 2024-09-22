@@ -1,17 +1,20 @@
 from PyQt6.QtWidgets import (QSizePolicy, QVBoxLayout, QLabel, QPushButton, QComboBox, QLineEdit,
-                             QListWidget, QHBoxLayout, QListWidgetItem, QWidget)
+                             QHBoxLayout, QListWidgetItem, QWidget)
 from PyQt6 import QtCore, QtWidgets
 
 from misc_utilities.CustomDraggableList import CustomDraggableList
 
 
 class AdvancedActions(QtWidgets.QWidget):
+    """
+    The window for AdvancedActions
+    """
     def __init__(self, main_app, current_setup):
         super(AdvancedActions, self).__init__()
         self.main_app = main_app
 
         self.actions = []
-        self.current_macro = 0  # Purely here for compatibility with CustomDraggableList
+        self.current_macro = 0  # Solely here for compatibility with CustomDraggableList
 
         self.macro_list = self.main_app.macro_list
 
@@ -108,34 +111,3 @@ class AdvancedActions(QtWidgets.QWidget):
 
     def get_macro_list(self):
         return self.main_app.macro_list
-
-    def startDrag(self, supportedActions):  # camelCase to match with PyQt5's def
-        """
-        Overwrites the startDrag def from PyQt5 to record the original row of the item that's being dragged and the item
-        itself. Then calls the standard startDrag to drag the item. This is used for the actions list
-        :param supportedActions: The default actions that are supported by PyQt5's start drag definition, here because
-            supportedActions is a default parameter for the def
-        """
-        self.action_list.start_pos = self.action_list.currentRow()
-        self.action_list.dragged_item = self.action_list.currentItem()
-        super(QListWidget, self.action_list).startDrag(supportedActions)
-
-    def dropEvent(self, event, **kwargs):  # camelCase to match with PyQt5's def
-        """
-        Overwrites the dropEvent def from PyQt5. It still moves the UI element to the new position, but additionally
-        moves the action object in self.action_list to the new position to permanently make the switch and have the
-        macro run in the correct order
-        :param event: The menu item that's dropped. A default parameter that comes with dropEvent from PyQt5
-        """
-        end_pos = self.action_list.indexAt(event.position().toPoint()).row()
-
-        if end_pos == -1:
-            end_pos = self.action_list.count()
-        elif event.position().toPoint().y() < self.action_list.visualItemRect(self.action_list.item(0)).top():
-            end_pos = 0
-
-        if self.action_list.dragged_item:
-            action = self.actions.pop(self.action_list.start_pos)
-            self.actions.insert(end_pos, action)
-        super(QListWidget, self.action_list).dropEvent(event)
-        self.update_action_list()

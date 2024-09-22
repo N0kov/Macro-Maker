@@ -1,5 +1,6 @@
-from PIL import ImageGrab
+from PIL import Image
 import numpy as np
+from mss import mss
 
 
 def mse(image1, image2):
@@ -40,24 +41,18 @@ def get_image(coordinates, not_numpy=None):
     :return: The screenshot of the specified area. If there is not a flag, it will be in PIL form, if there is it will
         be a numpy array. Either way it will be in RGB form, not RGBA
     """
-    bbox = (coordinates[0][0], coordinates[0][1], coordinates[1][0], coordinates[1][1])
-    screenshot = ImageGrab.grab(bbox)
-    if screenshot.mode == 'RGBA':
-        screenshot = screenshot.convert('RGB')
-    if not_numpy is None:
-        screenshot = np.array(screenshot)
+    with mss() as sct:
+        monitor = {"top": coordinates[0][1], "left": coordinates[0][0],
+                   "width": coordinates[1][0] - coordinates[0][0],
+                   "height": coordinates[1][1] - coordinates[0][1]}
+        screenshot = sct.grab(monitor)
+
+        if not_numpy is None:
+            screenshot = np.array(screenshot)[:, :, :3]
+
+    screenshot = Image.frombytes('RGB', (screenshot.width, screenshot.height), screenshot.rgb)
+
     return screenshot
-
-
-def threshold_calculation(image):
-    """
-    Calculates the threshold of acceptable error for any image passed in. This is based on the width and height of the
-    image, with a smaller image will have a smaller threshold.
-    :param image: A numpy array of an image. To be used to calculate the threshold
-    :return: Float, the maximum error threshold based on the dimensions of the image
-    """
-    width, height = image.shape[:2]
-    return ((width * height) / 2) ** .15  # This is a semi-arbitrary equation that gave a reasonable seeming value
 
 
 def compare_images(reference_image, coordinates, threshold):

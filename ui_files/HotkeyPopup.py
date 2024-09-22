@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import QDialog, QDialogButtonBox, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QComboBox
 from PyQt6 import QtCore
 from PyQt6.QtCore import Qt
-import inflect
+from num2words import num2words
 from misc_utilities.UI_helper import create_macro_list_names
 from misc_utilities.special_keys import special_keys
 
@@ -169,9 +169,8 @@ class HotkeyPopup(QDialog):
             text = self.key_combination
         if text != "":
             if text in self.bad_hotkeys and self.key_combination:
-                self.label.setText("Macro " + inflect.engine().number_to_words(self.bad_hotkeys.index(
-                    text) + 1) + " is already using " + text +
-                   "\n" + self.label.text())
+                self.label.setText("Macro " + num2words(self.bad_hotkeys.index(text) + 1) +
+                                   " is already using " + text + "\n" + self.label.text())
 
                 self.key_combination = ""
                 self.hotkey_display.setText("No hotkey")

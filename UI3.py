@@ -4,7 +4,7 @@ import queue
 import threading
 import sys
 
-import inflect
+from num2words import num2words
 import word2number.w2n as w2n
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import *
@@ -307,9 +307,7 @@ class MacroManagerMain(QMainWindow):
         else:
             if self.run_options.count() == 3:
                 self.run_options.insertItem(1, "")
-            self.run_options.setItemText(1, "Run " +
-                                         inflect.engine().number_to_words(self.run_counts[self.current_macro]) +
-                                         " times")
+            self.run_options.setItemText(1, "Run " + num2words(self.run_counts[self.current_macro]) + " times")
             self.run_options.setCurrentIndex(1)
         self.run_options.blockSignals(False)
 
@@ -357,8 +355,7 @@ class MacroManagerMain(QMainWindow):
             self.macro_list.addItem("Remove a macro")
 
         macro_position = len(self.actions)
-        self.macro_list.insertItem(macro_position, "Macro " +
-                                   inflect.engine().number_to_words((macro_position + 1)))
+        self.macro_list.insertItem(macro_position, "Macro " + num2words(macro_position + 1))
         self.current_macro = macro_position
         self.macro_list.setCurrentIndex(macro_position)
         self.macro_list.blockSignals(False)
@@ -417,7 +414,7 @@ class MacroManagerMain(QMainWindow):
         for i in range(len(self.actions)):
             try:
                 w2n.word_to_num(self.macro_list.itemText(i).split()[1])  # Custom macro == word two isn't a number
-                self.macro_list.setItemText(i, ("Macro " + inflect.engine().number_to_words(i + 1)))
+                self.macro_list.setItemText(i, ("Macro " + num2words(i + 1)))
             except (ValueError, IndexError):
                 pass
 
@@ -593,11 +590,10 @@ class MacroManagerMain(QMainWindow):
                 self.advanced_action_list.addItem(item)
 
             if advanced_list[0] > 0:
-                meta_label_text = ("After running " +
-                                   inflect.engine().number_to_words(advanced_list[0]) + " times:")
+                meta_label_text = ("After running " + num2words(advanced_list[0]) + " times:")
+
             else:
-                meta_label_text = ("After failing to detect images " +
-                                   inflect.engine().number_to_words(-advanced_list[0]) + " times:")
+                meta_label_text = ("After failing to detect images " + num2words(-advanced_list[0]) + " times:")
 
             self.meta_modifier_run_type.setText(meta_label_text)
             self.meta_modifier_run_type.show()

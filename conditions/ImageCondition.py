@@ -4,7 +4,8 @@ from pynput.mouse import Controller
 from PyQt6 import QtWidgets, QtCore, QtGui
 from PyQt6.QtGui import QPixmap, QImage
 from PyQt6.QtCore import Qt, QEvent
-from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton, QSlider, QWidget
+from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QComboBox, QPushButton, QSlider, QWidget, QApplication
+import gc
 
 
 class ImageCondition:
@@ -37,6 +38,7 @@ class ImageCondition:
         # This is *very* arbitrary, it comes from looking at MSE readouts,
         # then testing equations on Desmos to get to what seemed like a reasonable range (0 to 14)
         # within the allowed percentages (0 to 20%)
+        self.threshold = round((threshold_modifier * .01) ** .9 * 60, 4)
         self.threshold = round((threshold_modifier * .01) ** .9 * 60, 4)
 
     def run(self):
@@ -121,27 +123,57 @@ class ImageConditionUI(QtWidgets.QWidget):
 
         present_absent_label = QLabel("Should the image be present or absent?")
         left_layout.addWidget(present_absent_label)
+        overall_layout = QVBoxLayout(self)
+        h_layout = QHBoxLayout()
+        left_layout = QVBoxLayout()
+        right_layout = QVBoxLayout()
+        right_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        left_widget = QWidget()
+        left_widget.setLayout(left_layout)
+        self.right_widget = QWidget()
+        self.right_widget.setLayout(right_layout)
+        h_layout.addWidget(left_widget)
+        h_layout.addWidget(self.right_widget)
+        h_layout.setStretch(0, 100)
+        h_layout.setStretch(1, 100)
+        h_widget = QWidget()
+        h_widget.setLayout(h_layout)
+        overall_layout.addWidget(h_widget)
+
+        present_absent_label = QLabel("Should the image be present or absent?")
+        left_layout.addWidget(present_absent_label)
         self.present_absent_combo = QComboBox()
         self.present_absent_combo.addItems(["Present", "Absent"])
         left_layout.addWidget(self.present_absent_combo)
+        left_layout.addWidget(self.present_absent_combo)
 
+        top_left_label = QLabel("Press shift to set the top left of the image to where your mouse is.")
+        left_layout.addWidget(top_left_label)
         top_left_label = QLabel("Press shift to set the top left of the image to where your mouse is.")
         left_layout.addWidget(top_left_label)
 
         self.top_left_display = QLabel("Top left: Not set")
         left_layout.addWidget(self.top_left_display)
+        left_layout.addWidget(self.top_left_display)
 
+        bottom_right_label = QLabel("Press control to set the bottom right of the image to where your mouse is.")
+        left_layout.addWidget(bottom_right_label)
         bottom_right_label = QLabel("Press control to set the bottom right of the image to where your mouse is.")
         left_layout.addWidget(bottom_right_label)
 
         self.bottom_right_display = QLabel("Bottom right: Not set")
         left_layout.addWidget(self.bottom_right_display)
+        left_layout.addWidget(self.bottom_right_display)
 
+        self.captured_image_label = QLabel("Press alt to capture the image")
+        left_layout.addWidget(self.captured_image_label)
+        self.captured_image_label.hide()
         self.captured_image_label = QLabel("Press alt to capture the image")
         left_layout.addWidget(self.captured_image_label)
         self.captured_image_label.hide()
 
         error_label = QLabel("What percentage error should there be?")
+        left_layout.addWidget(error_label)
         left_layout.addWidget(error_label)
 
         error_slider_widget = QWidget()
@@ -167,6 +199,7 @@ class ImageConditionUI(QtWidgets.QWidget):
         error_widget_layout.addLayout(slider_layout)
 
         left_layout.addWidget(error_slider_widget)
+        left_layout.addWidget(error_slider_widget)
 
         self.captured_image_display = QLabel("No image captured")
         right_layout.addWidget(self.captured_image_display)
@@ -174,7 +207,16 @@ class ImageConditionUI(QtWidgets.QWidget):
         save_button = QPushButton("Save")
         save_button.clicked.connect(self.save_action)
         overall_layout.addWidget(save_button)
+        self.captured_image_display = QLabel("No image captured")
+        right_layout.addWidget(self.captured_image_display)
 
+        save_button = QPushButton("Save")
+        save_button.clicked.connect(self.save_action)
+        overall_layout.addWidget(save_button)
+
+        back_button = QPushButton("Back")
+        back_button.clicked.connect(self.main_app.switch_to_main_view)
+        overall_layout.addWidget(back_button)
         back_button = QPushButton("Back")
         back_button.clicked.connect(self.main_app.switch_to_main_view)
         overall_layout.addWidget(back_button)
@@ -195,10 +237,16 @@ class ImageConditionUI(QtWidgets.QWidget):
         if event.type() == QEvent.Type.KeyPress and event.key() == QtCore.Qt.Key.Key_Shift:
             self.top_left_temp = list(Controller().position)
             self.top_left_display.setText("Top left at: " + str(self.top_left_temp))
+            if self.top_left_temp and self.bottom_right_temp and self.captured_image_label.isHidden():
+                self.captured_image_label.show()
+            QApplication.processEvents()
             return True
         elif event.type() == QEvent.Type.KeyPress and event.key() == QtCore.Qt.Key.Key_Control:
             self.bottom_right_temp = list(Controller().position)
             self.bottom_right_display.setText("Bottom right at: " + str(self.bottom_right_temp))
+            if self.top_left_temp and self.bottom_right_temp and self.captured_image_label.isHidden():
+                self.captured_image_label.show()
+            QApplication.processEvents()
             return True
 
         if self.top_left_temp and self.bottom_right_temp:
@@ -208,15 +256,15 @@ class ImageConditionUI(QtWidgets.QWidget):
                     and self.top_left_temp != self.bottom_right_temp):
                 check_sizes(self.top_left_temp, self.bottom_right_temp)
 
-                self.top_left_permanent = self.top_left_temp.copy()
-                self.bottom_right_permanent = self.bottom_right_temp.copy()
+            self.top_left_permanent = self.top_left_temp.copy()
+            self.bottom_right_permanent = self.bottom_right_temp.copy()
 
-                self.image = capture_image([[self.top_left_permanent[0], self.top_left_permanent[1]],
-                                            [self.bottom_right_permanent[0], self.bottom_right_permanent[1]]],
-                                           "not numpy array")
+            self.image = capture_image([[self.top_left_permanent[0], self.top_left_permanent[1]],
+                                        [self.bottom_right_permanent[0], self.bottom_right_permanent[1]]],
+                                       "not numpy array")
 
-                image_qt = QtGui.QImage(self.image.tobytes(), self.image.width, self.image.height,
-                                        self.image.width * 3, QtGui.QImage.Format.Format_RGB888)
+            image_qt = QtGui.QImage(self.image.tobytes(), self.image.width, self.image.height,
+                                    self.image.width * 3, QtGui.QImage.Format.Format_RGB888)
 
                 pixmap = QPixmap.fromImage(image_qt)
                 scaled_pixmap = pixmap.scaled(self.right_widget.width() - 30, self.right_widget.height() - 30,
@@ -226,13 +274,29 @@ class ImageConditionUI(QtWidgets.QWidget):
                 self.captured_image_display.setPixmap(scaled_pixmap)
                 return True
 
+        gc.collect()
         return super(ImageConditionUI, self).eventFilter(source, event)
 
     def update_error_label(self):
         """
         Sets the error percent label to the new value of the error slider (with % error attached)
         """
+        """
+        Sets the error percent label to the new value of the error slider (with % error attached)
+        """
         self.error_percent_label.setText(str(self.error_slider.value()) + "% error")
+
+    def reset_ui(self):
+        """
+        Clears all the fields so the class can be used again
+        """
+        self.top_left_temp = None  # The temp ones are needed throughout, so they're class vars. These are needed
+        self.bottom_right_temp = None  # as after taking a screenshot the user should still be able to change the
+        self.top_left_permanent = None  # coordinates, but to make ImageDetect the final ones must be the same as
+        self.bottom_right_permanent = None  # those in the screenshot. permanent = temp on taking a screenshot
+        self.image = None
+        self.captured_image_display.setText("No image captured")
+        self.captured_image_label.hide()
 
     def save_action(self):
         """
@@ -251,4 +315,5 @@ class ImageConditionUI(QtWidgets.QWidget):
             check_sizes(top_left, bottom_right)
             condition = ImageCondition(top_left, bottom_right, image, self.error_slider.value())
             self.main_app.add_condition(condition, present_or_not)
+            self.reset_ui()
             self.main_app.switch_to_main_view()

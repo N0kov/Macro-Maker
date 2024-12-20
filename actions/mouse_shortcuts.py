@@ -1,6 +1,5 @@
 from pynput.mouse import Button, Controller
 from time import sleep
-from PyQt6.QtWidgets import QComboBox
 
 mouse = Controller()
 
@@ -44,21 +43,6 @@ def check_valid_input(coordinates):
         return [x, y]  # Forcing the correct format
     except (ValueError, TypeError):
         return [0, 0]  # In case bad data gets passed in
-
-
-def create_macro_list(macro_list):
-    """
-    Takes a QComboBox of the possible macros, and adds all of them to a new QComboBox,
-    up until it says "Create a macro", where it is then returned
-    :param macro_list: A QComboBox. Must have an index which says "Create a macro"
-    :return: A QComboBox of items up to Create a macro
-    """
-    i = 0
-    macro_to_remove_box = QComboBox()
-    while macro_list.itemText(i) != "Create a macro":
-        macro_to_remove_box.addItem(macro_list.itemText(i))
-        i += 1
-    return macro_to_remove_box
 
 
 def set_click_type(click_type_string):

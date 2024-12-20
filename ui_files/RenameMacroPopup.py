@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QDialogButtonBox, QLineEdit
-from actions.mouse_shortcuts import create_macro_list
+from misc_utilities.UI_helper import create_macro_list
 
 
 class RenameMacroPopup(QDialog):

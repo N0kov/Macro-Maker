@@ -14,7 +14,7 @@ class AdvancedActions(QtWidgets.QWidget):
         self.main_app = main_app
 
         self.actions = []
-        self.current_macro = 0  # Solely here for compatibility with CustomDraggableList
+        self.current_macro = 0  # Purely here for compatibility with CustomDraggableList
 
         self.macro_list = self.main_app.macro_list
 

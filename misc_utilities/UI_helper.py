@@ -1,5 +1,5 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QListWidgetItem, QMenu, QPushButton
+from PyQt6.QtWidgets import QListWidgetItem, QMenu, QPushButton, QComboBox, QPushButton
 from copy import deepcopy
 
 from actions import *
@@ -46,6 +46,7 @@ def copy_or_remove_item(source, item, choice):
     """
     # There are three different things tried here for copy and remove as there are three different possible data
     # types that could be passed in. See dropEvent from CustomDraggableList for a full explanation
+    if choice == "append" or choice == "pop":
     if choice == "append" or choice == "pop":
         if choice == "append":
             item = deepcopy(item)

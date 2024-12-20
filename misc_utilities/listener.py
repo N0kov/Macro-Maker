@@ -5,6 +5,8 @@ from pynput.keyboard import Key, Listener, KeyCode
 listener = None  # Is the listener active?
 callback = None  # Callback function
 hotkey = []  # The keys that are being listened for
+break_key = Key.f10
+break_key_str = 'f10'
 
 
 def change_hotkey(new_hotkey, hotkey_index):
@@ -28,6 +30,12 @@ def remove_hotkey(index):
     """
     global hotkey
     hotkey.pop(index)
+
+
+def set_break_key(new_break_key):
+    global break_key, break_key_str
+    break_key_str = new_break_key
+    break_key = convert_to_pynput(new_break_key)
 
 
 def convert_to_pynput(keys):
@@ -60,8 +68,10 @@ def on_press(key):
                 listener.stop()
                 if callback:  # For if we're doing threading
                     callback(hotkey.index(key))
+        elif key == break_key:
+            callback(-1)
     except Exception as e:
-        print("on_press exception: " + str(e))
+        pass
 
 
 def start_listener(script=None):

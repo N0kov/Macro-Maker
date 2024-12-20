@@ -4,7 +4,7 @@ import queue
 import threading
 import sys
 
-import inflect
+from num2words import num2words
 import word2number.w2n as w2n
 from PyQt6.QtGui import QAction
 from PyQt6.QtWidgets import *
@@ -33,6 +33,8 @@ class MacroManagerMain(QMainWindow):
         self.macros_to_run = queue.Queue()
         self.mutex = threading.Lock()
         self.current_running_macro = 0
+        # This one is so weighty that it needs this so that the delay isn't too bad on going to the view
+        self.image_config_view = ImageConditionUI(self)
 
         self.start_hotkey_listener()  # Thread stuff - checking for the hotkey to run your script
         self.run_action_condition = threading.Condition()  # Notification for the thread that runs the macro
@@ -77,7 +79,7 @@ class MacroManagerMain(QMainWindow):
         self.run_options.addItem("Custom run count")
         self.run_options.currentIndexChanged.connect(self.run_options_clicked)
 
-        self.set_hotkey_button = QPushButton("Set a hotkey (currently " + str(self.hotkeys[0]) + ")")
+        self.set_hotkey_button = QPushButton("Set hotkey (currently " + str(self.hotkeys[0]) + ")")
         self.set_hotkey_button.clicked.connect(self.hotkey_clicked)
 
         self.macro_list = QComboBox()
@@ -305,9 +307,7 @@ class MacroManagerMain(QMainWindow):
         else:
             if self.run_options.count() == 3:
                 self.run_options.insertItem(1, "")
-            self.run_options.setItemText(1, "Run " +
-                                         inflect.engine().number_to_words(self.run_counts[self.current_macro]) +
-                                         " times")
+            self.run_options.setItemText(1, "Run " + num2words(self.run_counts[self.current_macro]) + " times")
             self.run_options.setCurrentIndex(1)
         self.run_options.blockSignals(False)
 
@@ -337,10 +337,10 @@ class MacroManagerMain(QMainWindow):
             self.current_macro = self.macro_list.currentIndex()
             self.set_run_options_from_run_counts()
             if self.hotkeys[self.current_macro] != "":
-                self.set_hotkey_button.setText("Set a hotkey (currently " +
+                self.set_hotkey_button.setText("Set hotkey (currently " +
                                                str(self.hotkeys[self.current_macro]) + ")")
             else:
-                self.set_hotkey_button.setText("Set a hotkey")
+                self.set_hotkey_button.setText("Set hotkey")
 
         self.update_action_list()
         self.update_condition_list()
@@ -355,8 +355,7 @@ class MacroManagerMain(QMainWindow):
             self.macro_list.addItem("Remove a macro")
 
         macro_position = len(self.actions)
-        self.macro_list.insertItem(macro_position, "Macro " +
-                                   inflect.engine().number_to_words((macro_position + 1)))
+        self.macro_list.insertItem(macro_position, "Macro " + num2words(macro_position + 1))
         self.current_macro = macro_position
         self.macro_list.setCurrentIndex(macro_position)
         self.macro_list.blockSignals(False)
@@ -375,7 +374,7 @@ class MacroManagerMain(QMainWindow):
         self.run_counts.append(1)
         self.hotkeys.append("")
         listener.change_hotkey(self.hotkeys[self.current_macro], self.current_macro)
-        self.set_hotkey_button.setText("Set a hotkey")
+        self.set_hotkey_button.setText("Set hotkey")
 
     def remove_macro(self):
         """
@@ -415,7 +414,7 @@ class MacroManagerMain(QMainWindow):
         for i in range(len(self.actions)):
             try:
                 w2n.word_to_num(self.macro_list.itemText(i).split()[1])  # Custom macro == word two isn't a number
-                self.macro_list.setItemText(i, ("Macro " + inflect.engine().number_to_words(i + 1)))
+                self.macro_list.setItemText(i, ("Macro " + num2words(i + 1)))
             except (ValueError, IndexError):
                 pass
 
@@ -453,22 +452,22 @@ class MacroManagerMain(QMainWindow):
         hotkey. The button is updated after with the new hotkey. If the user gives no input or an invalid input,
         the hotkey will be set to none
         """
-        popup = HotkeyPopup(self.current_macro, self.hotkeys)
+        popup = HotkeyPopup(self.current_macro, self.hotkeys, listener.break_key_str,
+                            self.macro_list, self.current_macro)
         if popup.exec() == QDialog.DialogCode.Accepted:
-            try:
-                if list is type(popup.key_combination):
-                    self.hotkeys[self.current_macro] = popup.key_combination[0]
-                else:
-                    self.hotkeys[self.current_macro] = popup.key_combination
-                if self.hotkeys[self.current_macro] != "":
-                    self.set_hotkey_button.setText("Set a hotkey (currently " +
-                                                   str(self.hotkeys[self.current_macro]) + ")")
-                else:
-                    self.set_hotkey_button.setText("Set a hotkey")
-            except (AttributeError, IndexError):
-                self.hotkeys[self.current_macro] = ""
-                self.set_hotkey_button.setText("Set a hotkey")
-            listener.change_hotkey(self.hotkeys[self.current_macro], self.current_macro)
+            if popup.hotkey_location.currentText() != "Universal break key":
+                macro_index = popup.hotkey_location.currentIndex() - 1
+                print(macro_index)
+                self.hotkeys[macro_index] = popup.key_combination
+                if macro_index == self.current_macro:
+                    if self.hotkeys[macro_index] != "":
+                        self.set_hotkey_button.setText("Set hotkey (currently " +
+                                                       str(self.hotkeys[self.current_macro]) + ")")
+                    else:
+                        self.set_hotkey_button.setText("Set hotkey")
+                listener.change_hotkey(self.hotkeys[macro_index], macro_index)
+            else:
+                listener.set_break_key(popup.key_combination)
 
     def save_macros(self):
         """
@@ -552,10 +551,10 @@ class MacroManagerMain(QMainWindow):
                         pass
 
                 if self.hotkeys[self.current_macro] != "":
-                    self.set_hotkey_button.setText("Set a hotkey (currently " +
+                    self.set_hotkey_button.setText("Set hotkey (currently " +
                                                    str(self.hotkeys[self.current_macro]) + ")")
                 else:
-                    self.set_hotkey_button.setText("Set a hotkey")
+                    self.set_hotkey_button.setText("Set hotkey")
 
                 self.set_run_options_from_run_counts()
                 self.update_condition_list()
@@ -591,11 +590,10 @@ class MacroManagerMain(QMainWindow):
                 self.advanced_action_list.addItem(item)
 
             if advanced_list[0] > 0:
-                meta_label_text = ("After running " +
-                                   inflect.engine().number_to_words(advanced_list[0]) + " times:")
+                meta_label_text = ("After running " + num2words(advanced_list[0]) + " times:")
+
             else:
-                meta_label_text = ("After failing to detect images " +
-                                   inflect.engine().number_to_words(-advanced_list[0]) + " times:")
+                meta_label_text = ("After failing to detect images " + num2words(-advanced_list[0]) + " times:")
 
             self.meta_modifier_run_type.setText(meta_label_text)
             self.meta_modifier_run_type.show()
@@ -707,7 +705,6 @@ class MacroManagerMain(QMainWindow):
         This switches the UI to the ImageCondition Class for the user to make a condition, before returning to the
         main UI
         """
-        self.image_config_view = ImageConditionUI(self)
         self.central_widget.addWidget(self.image_config_view)
         self.central_widget.setCurrentWidget(self.image_config_view)
 
@@ -884,7 +881,7 @@ class MacroManagerMain(QMainWindow):
                     self.run_action_condition.notify()
 
         else:
-            if self.current_running_macro != index:
+            if self.current_running_macro != index and index != -1:
                 self.macros_to_run.put(index)
             else:
                 self.run_button.setText("Stopping")

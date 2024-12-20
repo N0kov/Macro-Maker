@@ -56,6 +56,7 @@ class CustomDraggableList(QListWidget):
             end_pos = 0
 
         if self.dragged_item:
+            print(self.source_list)
             # The problem is that all of these lists are using different data types, so it needs to account for each
             # one. If it's coming from actions, it's [[]], advanced_actions in main is [["item", ["a", "b"]]],
             # AdvancedActions is [], and all three need to be checked for. AdvancedActions is being passed in wrapped

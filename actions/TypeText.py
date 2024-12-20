@@ -97,9 +97,9 @@ class TypeText(Action):
         for i in range(len(temp_series)):
             if len(temp_series[i]) > 1:
                 try:
-                    temp_key = getattr(Key, (temp_series[i]))
+                    temp_key = getattr(Key, (temp_series[i].lower()))
                     if temp_key not in no_move:
-                        self.series.insert(0, getattr(Key, (temp_series[i])))
+                        self.series.insert(0, temp_key)
                     else:
                         self.series.append(temp_key)
                 except AttributeError:

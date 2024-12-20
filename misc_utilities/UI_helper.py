@@ -1,5 +1,5 @@
 from PyQt6.QtCore import Qt
-from PyQt6.QtWidgets import QListWidgetItem, QMenu
+from PyQt6.QtWidgets import QListWidgetItem, QMenu, QPushButton
 from copy import deepcopy
 
 from actions import *
@@ -38,7 +38,7 @@ def right_click_actions_menu(position, source):
 
 def copy_or_remove_item(source, item, choice):
     """
-    Calls the desired method (either append or remove) on the passed in list using the specified item. Does
+    Calls the desired method (either append or pop) on the passed in list using the specified item. Does
     nothing if choice is not append or remove
     :param source: The list to be edited - list
     :param item: The item to be copied / removed - anything
@@ -46,7 +46,7 @@ def copy_or_remove_item(source, item, choice):
     """
     # There are three different things tried here for copy and remove as there are three different possible data
     # types that could be passed in. See dropEvent from CustomDraggableList for a full explanation
-    if choice == "append" or choice == "remove":
+    if choice == "append" or choice == "pop":
         if choice == "append":
             item = deepcopy(item)
         try:
@@ -105,3 +105,20 @@ def call_ui_with_params(source, item):
     except AttributeError:
         source.main_application.main_app.central_widget.addWidget(edit_view)
         source.main_application.main_app.central_widget.setCurrentWidget(edit_view)
+
+
+def create_push_button():
+    plus_button_stylesheet = ("""
+    QPushButton {
+        border-radius: 20px;
+        background-color: #007bff;
+        color: white;
+        font-family: Arial;
+        font-size: 30px;
+    }
+    """)
+
+    add_action_button = QPushButton("+")
+    add_action_button.setFixedSize(40, 40)
+    add_action_button.setStyleSheet(plus_button_stylesheet)
+    return add_action_button

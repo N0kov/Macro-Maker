@@ -120,5 +120,7 @@ class WaitUI(QtWidgets.QWidget):
                     self.main_app.add_action(wait)
             self.main_app.update_action_list()
             self.main_app.switch_to_main_view()
+        elif wait_time_str == "":
+            self.main_app.switch_to_main_view()
         else:
             QtWidgets.QMessageBox.warning(self, "Invalid Input", "Wait time must be a positive number.")
